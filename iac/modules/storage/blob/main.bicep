@@ -94,7 +94,7 @@ resource blobContainers 'Microsoft.Storage/storageAccounts/blobServices/containe
 }]
 
 // ==============================================================================
-// OUTPUTS
+// OUTPUTS (SIN SECRETOS)
 // ==============================================================================
 
 @description('Storage Account resource ID')
@@ -106,8 +106,5 @@ output name string = storageAccount.name
 @description('Storage Account primary endpoints')
 output primaryEndpoints object = storageAccount.properties.primaryEndpoints
 
-@description('Storage Account connection string')
-output connectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
-
-@description('Storage Account primary access key')
-output primaryAccessKey string = storageAccount.listKeys().keys[0].value
+// REMOVIDO: connectionString y primaryAccessKey por seguridad
+// Estas se pueden obtener en el template principal usando referenceConnection functions

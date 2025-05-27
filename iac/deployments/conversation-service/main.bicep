@@ -217,6 +217,14 @@ module storageAccount '../../modules/storage/blob/main.bicep' = {
   }
 }
 
+// Get storage account reference for connection string
+resource storageAccountResource 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: storageAccountName
+  dependsOn: [
+    storageAccount
+  ]
+}
+
 // ==============================================================================
 // DATABASE RESOURCES
 // ==============================================================================
@@ -338,7 +346,7 @@ module backendApp '../../modules/compute/app-service/main.bicep' = {
       }
       {
         name: 'STORAGE_CONNECTION_STRING'
-        value: storageAccount.outputs.connectionString
+        value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountResource.name};AccountKey=${storageAccountResource.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
       }
       {
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
