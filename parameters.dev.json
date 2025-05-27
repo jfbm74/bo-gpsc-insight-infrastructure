@@ -6,7 +6,7 @@
       "value": "dev"
     },
     "location": {
-      "value": "East US 2"
+      "value": "East US"
     },
     "baseName": {
       "value": "blueowl-gps"
@@ -19,6 +19,12 @@
     },
     "yourIpAddress": {
       "value": "181.50.232.156"
+    },
+    "appServiceSkuName": {
+      "value": "F1"
+    },
+    "appServiceSkuTier": {
+      "value": "Free"
     }
   }
 }

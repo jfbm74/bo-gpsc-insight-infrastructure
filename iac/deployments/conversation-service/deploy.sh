@@ -33,7 +33,7 @@ print_error() {
 
 # Default values
 ENVIRONMENT="dev"
-LOCATION="East US 2"
+LOCATION="East US"
 RESOURCE_GROUP_NAME=""
 SUBSCRIPTION_ID=""
 SKIP_CONFIRMATION=false
@@ -45,7 +45,7 @@ show_usage() {
     echo ""
     echo "Options:"
     echo "  -e, --environment     Environment (dev, uat, prod) [default: dev]"
-    echo "  -l, --location        Azure region [default: East US 2]"
+    echo "  -l, --location        Azure region [default: East US]"
     echo "  -g, --resource-group  Resource group name [required]"
     echo "  -s, --subscription    Azure subscription ID [required]"
     echo "  -p, --parameters      Parameters file path [optional]"
@@ -134,17 +134,10 @@ echo "  • Subscription:     $SUBSCRIPTION_ID"
 echo "  • Parameters File:  $PARAMETERS_FILE"
 echo ""
 
-# Confirmation prompt
-if [[ "$SKIP_CONFIRMATION" != true ]]; then
-    read -p "Do you want to proceed with the deployment? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_warning "Deployment cancelled by user."
-        exit 0
-    fi
-fi
+# Pre-deployment checks
+print_status "Running pre-deployment checks..."
 
-# Check if user is logged in to Azure CLI
+# Check Azure CLI authentication
 print_status "Checking Azure CLI authentication..."
 if ! az account show &> /dev/null; then
     print_error "Not logged in to Azure CLI. Please run 'az login' first."
@@ -157,6 +150,39 @@ az account set --subscription "$SUBSCRIPTION_ID"
 if [[ $? -ne 0 ]]; then
     print_error "Failed to set subscription: $SUBSCRIPTION_ID"
     exit 1
+fi
+
+# Check and register required providers
+print_status "Checking required Azure providers..."
+PROVIDERS=(
+    "Microsoft.Web"
+    "Microsoft.Storage"
+    "Microsoft.Sql"
+    "Microsoft.Network"
+    "Microsoft.Insights"
+    "Microsoft.OperationalInsights"
+    "Microsoft.Communication"
+    "Microsoft.AlertsManagement"
+)
+
+for provider in "${PROVIDERS[@]}"; do
+    status=$(az provider show --namespace "$provider" --query "registrationState" -o tsv 2>/dev/null || echo "NotRegistered")
+    if [[ "$status" != "Registered" ]]; then
+        print_warning "Registering provider: $provider"
+        az provider register --namespace "$provider" --output none
+    fi
+done
+
+print_success "All required providers are registered or being registered"
+
+# Confirmation prompt
+if [[ "$SKIP_CONFIRMATION" != true ]]; then
+    read -p "Do you want to proceed with the deployment? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_warning "Deployment cancelled by user."
+        exit 0
+    fi
 fi
 
 # Check if resource group exists, create if it doesn't
@@ -238,7 +264,9 @@ if [[ $? -eq 0 ]]; then
     echo "2. Configure application settings:"
     echo "   Check the deployment outputs above for URLs and connection strings"
     echo ""
-    echo "3. Deploy your applications to the App Services"
+    echo "3. Deploy your applications to the App Services:"
+    echo "   Frontend: blueowl-gps-dev-frontend.azurewebsites.net"
+    echo "   Backend:  blueowl-gps-dev-backend.azurewebsites.net"
     echo ""
     echo "4. Monitor deployment:"
     echo "   az monitor activity-log list --resource-group $RESOURCE_GROUP_NAME"

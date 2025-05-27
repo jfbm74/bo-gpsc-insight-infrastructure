@@ -33,11 +33,9 @@ param yourIpAddress string
 param timestamp string = utcNow()
 
 @description('App Service Plan SKU name')
-@allowed(['F1', 'D1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1V2', 'P2V2', 'P3V2', 'P1V3', 'P2V3', 'P3V3'])
 param appServiceSkuName string = 'F1'
 
 @description('App Service Plan SKU tier')
-@allowed(['Free', 'Shared', 'Basic', 'Standard', 'Premium', 'PremiumV2', 'PremiumV3'])
 param appServiceSkuTier string = 'Free'
 
 // ==============================================================================
@@ -180,7 +178,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-// Application Insights (with explicit disable of smart alerts to avoid provider issues)
+// Application Insights
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
   location: location
@@ -189,10 +187,6 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
-    DisableIpMasking: false
-    DisableLocalAuth: false
-    Flow_Type: 'Redfield'
-    Request_Source: 'rest'
   }
 }
 
@@ -231,7 +225,6 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
     administratorLoginPassword: sqlAdminPassword
     version: '12.0'
     publicNetworkAccess: 'Enabled'
-    minimalTlsVersion: '1.2'
   }
 }
 
@@ -249,8 +242,6 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 268435456000 // 250 GB
-    readScale: 'Disabled'
-    requestedBackupStorageRedundancy: 'Local'
   }
 }
 
@@ -284,8 +275,8 @@ module appServicePlan '../../modules/compute/service-plan/main.bicep' = {
     name: appServicePlanName
     location: location
     tags: commonTags
-    skuName: appServiceSkuName
-    skuTier: appServiceSkuTier
+    skuName: appServiceSkuName      // <-- USANDO PARÁMETRO DINÁMICO
+    skuTier: appServiceSkuTier      // <-- USANDO PARÁMETRO DINÁMICO
     capacity: 1
     reserved: true // Linux
   }
@@ -308,14 +299,6 @@ module frontendApp '../../modules/compute/app-service/main.bicep' = {
       {
         name: 'REACT_APP_ENVIRONMENT'
         value: environment
-      }
-      {
-        name: 'WEBSITE_NODE_DEFAULT_VERSION'
-        value: '18-lts'
-      }
-      {
-        name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-        value: 'true'
       }
     ]
     linuxFxVersion: 'NODE|18-lts'
@@ -351,10 +334,6 @@ module backendApp '../../modules/compute/app-service/main.bicep' = {
       {
         name: 'PYTHONPATH'
         value: '/home/site/wwwroot'
-      }
-      {
-        name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-        value: 'true'
       }
     ]
     linuxFxVersion: 'PYTHON|3.11'
@@ -414,38 +393,13 @@ module applicationGateway '../../modules/network/application-gateway/main.bicep'
 // OUTPUTS
 // ==============================================================================
 
-@description('Resource Group Name')
 output resourceGroupName string = resourceGroup().name
-
-@description('Virtual Network Name')
 output vnetName string = vnet.name
-
-@description('Frontend App URL')
 output frontendUrl string = 'https://${frontendAppName}.azurewebsites.net'
-
-@description('Backend API URL')
 output backendUrl string = 'https://${backendAppName}.azurewebsites.net'
-
-@description('Application Gateway URL')
 output applicationGatewayUrl string = 'https://${appGatewayPublicIP.properties.dnsSettings.fqdn}'
-
-@description('SQL Server Name')
 output sqlServerName string = sqlServer.name
-
-@description('SQL Database Name')
 output sqlDatabaseName string = sqlDatabase.name
-
-@description('Storage Account Name')
 output storageAccountName string = storageAccount.outputs.name
-
-@description('Application Insights Name')
 output appInsightsName string = appInsights.name
-
-@description('Communication Service Name')
 output communicationServiceName string = communicationService.name
-
-@description('App Service Plan SKU')
-output appServicePlanSku string = '${appServiceSkuName} (${appServiceSkuTier})'
-
-@description('Deployment Region')
-output deploymentRegion string = location
