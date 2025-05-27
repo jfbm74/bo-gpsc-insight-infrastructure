@@ -15,15 +15,16 @@
       "value": "sqladmin"
     },
     "sqlAdminPassword": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/{subscription-id}/resourceGroups/{keyvault-rg}/providers/Microsoft.KeyVault/vaults/{keyvault-name}"
-        },
-        "secretName": "sql-admin-password"
-      }
+      "value": "ComplexPassword123!"
     },
     "yourIpAddress": {
-      "value": "0.0.0.0"
+      "value": "181.50.232.156"
+    },
+    "appServiceSkuName": {
+      "value": "F1"
+    },
+    "appServiceSkuTier": {
+      "value": "Free"
     }
   }
 }

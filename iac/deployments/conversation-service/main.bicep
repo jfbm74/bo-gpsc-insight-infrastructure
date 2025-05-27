@@ -29,6 +29,9 @@ param sqlAdminPassword string
 @description('Your IP address for SQL firewall rule')
 param yourIpAddress string
 
+@description('Current timestamp for unique naming')
+param timestamp string = utcNow()
+
 // ==============================================================================
 // VARIABLES
 // ==============================================================================
@@ -58,7 +61,7 @@ var commonTags = {
   Environment: environment
   Project: 'BlueOwl-GPS-Reporting'
   ManagedBy: 'Bicep'
-  CreatedDate: utcNow()
+  CreatedDate: timestamp
 }
 
 // ==============================================================================
@@ -186,7 +189,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 // ==============================================================================
 
 // Storage Account
-module storageAccount '../../../modules/storage/blob/main.bicep' = {
+module storageAccount '../../modules/storage/blob/main.bicep' = {
   name: 'storage-deployment'
   params: {
     name: storageAccountName
@@ -260,7 +263,7 @@ resource sqlFirewallRuleAllowYourIP 'Microsoft.Sql/servers/firewallRules@2023-08
 // ==============================================================================
 
 // App Service Plan (Basic tier for DEV)
-module appServicePlan '../../../modules/compute/service-plan/main.bicep' = {
+module appServicePlan '../../modules/compute/service-plan/main.bicep' = {
   name: 'app-service-plan-deployment'
   params: {
     name: appServicePlanName
@@ -274,7 +277,7 @@ module appServicePlan '../../../modules/compute/service-plan/main.bicep' = {
 }
 
 // React Frontend Web App
-module frontendApp '../../../modules/compute/app-service/main.bicep' = {
+module frontendApp '../../modules/compute/app-service/main.bicep' = {
   name: 'frontend-app-deployment'
   params: {
     name: frontendAppName
@@ -297,7 +300,7 @@ module frontendApp '../../../modules/compute/app-service/main.bicep' = {
 }
 
 // FastAPI Backend App Service
-module backendApp '../../../modules/compute/app-service/main.bicep' = {
+module backendApp '../../modules/compute/app-service/main.bicep' = {
   name: 'backend-app-deployment'
   params: {
     name: backendAppName
@@ -367,7 +370,7 @@ resource appGatewayPublicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
 }
 
 // Application Gateway
-module applicationGateway '../../../modules/network/application-gateway/main.bicep' = {
+module applicationGateway '../../modules/network/application-gateway/main.bicep' = {
   name: 'app-gateway-deployment'
   params: {
     name: appGatewayName
