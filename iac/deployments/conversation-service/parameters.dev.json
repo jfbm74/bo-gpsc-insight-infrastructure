@@ -2,29 +2,13 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "environment": {
-      "value": "dev"
-    },
-    "location": {
-      "value": "East US"
-    },
-    "baseName": {
-      "value": "blueowl-gps"
-    },
-    "sqlAdminUsername": {
-      "value": "sqladmin"
-    },
-    "sqlAdminPassword": {
-      "value": "ComplexPassword123!"
-    },
-    "yourIpAddress": {
-      "value": "181.50.232.156"
-    },
-    "appServiceSkuName": {
-      "value": "F1"
-    },
-    "appServiceSkuTier": {
-      "value": "Free"
-    }
+    "environment": {"value": "dev"},
+    "location": {"value": "West US 2"},
+    "baseName": {"value": "blueowl-gps"},
+    "sqlAdminUsername": {"value": "sqladmin"},
+    "sqlAdminPassword": {"value": "ComplexPassword123!"},
+    "yourIpAddress": {"value": "181.50.232.156"},
+    "appServiceSkuName": {"value": "B1"},
+    "appServiceSkuTier": {"value": "Basic"}
   }
 }

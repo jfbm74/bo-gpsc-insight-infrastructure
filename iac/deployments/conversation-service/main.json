@@ -1,0 +1,1524 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.35.1.17967",
+      "templateHash": "5880336025318810058"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Environment name (dev, uat, prod)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "baseName": {
+      "type": "string",
+      "defaultValue": "blueowl-gps",
+      "metadata": {
+        "description": "Base name for all resources"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin username for SQL Database"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for SQL Database"
+      }
+    },
+    "yourIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Your IP address for SQL firewall rule"
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "defaultValue": "[utcNow()]",
+      "metadata": {
+        "description": "Current timestamp for unique naming"
+      }
+    },
+    "appServiceSkuName": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1V2",
+        "P2V2",
+        "P3V2",
+        "P1V3",
+        "P2V3",
+        "P3V3"
+      ],
+      "metadata": {
+        "description": "App Service Plan SKU name"
+      }
+    },
+    "appServiceSkuTier": {
+      "type": "string",
+      "defaultValue": "Free",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard",
+        "Premium",
+        "PremiumV2",
+        "PremiumV3"
+      ],
+      "metadata": {
+        "description": "App Service Plan SKU tier"
+      }
+    }
+  },
+  "variables": {
+    "namingPrefix": "[format('{0}-{1}', parameters('baseName'), parameters('environment'))]",
+    "vnetName": "[format('{0}-vnet', variables('namingPrefix'))]",
+    "privateSubnetName": "[format('{0}-private-subnet', variables('namingPrefix'))]",
+    "appServicePlanName": "[format('{0}-asp', variables('namingPrefix'))]",
+    "frontendAppName": "[format('{0}-frontend', variables('namingPrefix'))]",
+    "backendAppName": "[format('{0}-backend', variables('namingPrefix'))]",
+    "sqlServerName": "[format('{0}-sqlserver', variables('namingPrefix'))]",
+    "sqlDatabaseName": "[format('{0}-database', variables('namingPrefix'))]",
+    "storageAccountName": "[replace(format('{0}{1}storage', parameters('baseName'), parameters('environment')), '-', '')]",
+    "appGatewayName": "[format('{0}-appgw', variables('namingPrefix'))]",
+    "appInsightsName": "[format('{0}-insights', variables('namingPrefix'))]",
+    "logAnalyticsName": "[format('{0}-logs', variables('namingPrefix'))]",
+    "nsgName": "[format('{0}-nsg', variables('namingPrefix'))]",
+    "communicationServiceName": "[format('{0}-communication', variables('namingPrefix'))]",
+    "vnetAddressPrefix": "10.0.0.0/16",
+    "privateSubnetPrefix": "10.0.1.0/24",
+    "appGatewaySubnetPrefix": "10.0.2.0/24",
+    "commonTags": {
+      "Environment": "[parameters('environment')]",
+      "Project": "BlueOwl-GPS-Reporting",
+      "ManagedBy": "Bicep",
+      "CreatedDate": "[parameters('timestamp')]"
+    }
+  },
+  "resources": {
+    "privateSubnetNsg": {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowAppServiceManagement",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "454-455",
+              "sourceAddressPrefix": "AppServiceManagement",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1020,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    "vnet": {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('privateSubnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('privateSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              },
+              "delegations": [
+                {
+                  "name": "Microsoft.Web.serverFarms",
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "ApplicationGatewaySubnet",
+            "properties": {
+              "addressPrefix": "[variables('appGatewaySubnetPrefix')]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "privateSubnetNsg"
+      ]
+    },
+    "logAnalytics": {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    "appInsights": {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "DisableIpMasking": false,
+        "DisableLocalAuth": false,
+        "Flow_Type": "Redfield",
+        "Request_Source": "rest"
+      },
+      "dependsOn": [
+        "logAnalytics"
+      ]
+    },
+    "storageAccountResource": {
+      "existing": true,
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "dependsOn": [
+        "storageAccount"
+      ]
+    },
+    "sqlServer": {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminUsername')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "version": "12.0",
+        "publicNetworkAccess": "Enabled",
+        "minimalTlsVersion": "1.2"
+      }
+    },
+    "sqlDatabase": {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/{1}', variables('sqlServerName'), variables('sqlDatabaseName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "sku": {
+        "name": "S1",
+        "tier": "Standard",
+        "capacity": 20
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 268435456000,
+        "readScale": "Disabled",
+        "requestedBackupStorageRedundancy": "Local"
+      },
+      "dependsOn": [
+        "sqlServer"
+      ]
+    },
+    "sqlFirewallRuleAllowAzure": {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/{1}', variables('sqlServerName'), 'AllowAllWindowsAzureIps')]",
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      },
+      "dependsOn": [
+        "sqlServer"
+      ]
+    },
+    "sqlFirewallRuleAllowYourIP": {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/{1}', variables('sqlServerName'), 'AllowYourIP')]",
+      "properties": {
+        "startIpAddress": "[parameters('yourIpAddress')]",
+        "endIpAddress": "[parameters('yourIpAddress')]"
+      },
+      "dependsOn": [
+        "sqlServer"
+      ]
+    },
+    "communicationService": {
+      "type": "Microsoft.Communication/communicationServices",
+      "apiVersion": "2023-04-01",
+      "name": "[variables('communicationServiceName')]",
+      "location": "global",
+      "tags": "[variables('commonTags')]",
+      "properties": {
+        "dataLocation": "United States"
+      }
+    },
+    "appGatewayPublicIP": {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-04-01",
+      "name": "[format('{0}-pip', variables('appGatewayName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[format('{0}-gateway', variables('namingPrefix'))]"
+        }
+      }
+    },
+    "storageAccount": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storage-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('storageAccountName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "sku": {
+            "value": "Standard_LRS"
+          },
+          "accessTier": {
+            "value": "Hot"
+          },
+          "containers": {
+            "value": [
+              "uploads",
+              "reports",
+              "temp"
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.35.1.17967",
+              "templateHash": "13570190519474200581"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Storage Account"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the Storage Account"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags for the Storage Account"
+              }
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "Standard_LRS",
+              "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Standard_ZRS",
+                "Premium_LRS"
+              ],
+              "metadata": {
+                "description": "Storage Account SKU"
+              }
+            },
+            "accessTier": {
+              "type": "string",
+              "defaultValue": "Hot",
+              "allowedValues": [
+                "Hot",
+                "Cool"
+              ],
+              "metadata": {
+                "description": "Storage Account Access Tier"
+              }
+            },
+            "containers": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "List of container names to create"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "[parameters('sku')]"
+              },
+              "properties": {
+                "accessTier": "[parameters('accessTier')]",
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "defaultToOAuthAuthentication": false,
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices"
+                },
+                "encryption": {
+                  "services": {
+                    "blob": {
+                      "enabled": true
+                    },
+                    "file": {
+                      "enabled": true
+                    }
+                  },
+                  "keySource": "Microsoft.Storage"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "properties": {
+                "cors": {
+                  "corsRules": [
+                    {
+                      "allowedOrigins": [
+                        "*"
+                      ],
+                      "allowedMethods": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "HEAD",
+                        "OPTIONS"
+                      ],
+                      "allowedHeaders": [
+                        "*"
+                      ],
+                      "exposedHeaders": [
+                        "*"
+                      ],
+                      "maxAgeInSeconds": 86400
+                    }
+                  ]
+                },
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "blobContainers",
+                "count": "[length(parameters('containers'))]"
+              },
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', parameters('containers')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage Account resource ID"
+              },
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage Account name"
+              },
+              "value": "[parameters('name')]"
+            },
+            "primaryEndpoints": {
+              "type": "object",
+              "metadata": {
+                "description": "Storage Account primary endpoints"
+              },
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-01-01').primaryEndpoints]"
+            }
+          }
+        }
+      }
+    },
+    "appServicePlan": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "app-service-plan-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('appServicePlanName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "skuName": {
+            "value": "[parameters('appServiceSkuName')]"
+          },
+          "skuTier": {
+            "value": "[parameters('appServiceSkuTier')]"
+          },
+          "capacity": {
+            "value": 1
+          },
+          "reserved": {
+            "value": true
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.35.1.17967",
+              "templateHash": "2601351272530433531"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the App Service Plan"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the App Service Plan"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags for the App Service Plan"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "B1",
+              "allowedValues": [
+                "F1",
+                "D1",
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1V2",
+                "P2V2",
+                "P3V2",
+                "P1V3",
+                "P2V3",
+                "P3V3"
+              ],
+              "metadata": {
+                "description": "App Service Plan SKU name"
+              }
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "Basic",
+              "allowedValues": [
+                "Free",
+                "Shared",
+                "Basic",
+                "Standard",
+                "Premium",
+                "PremiumV2",
+                "PremiumV3"
+              ],
+              "metadata": {
+                "description": "App Service Plan SKU tier"
+              }
+            },
+            "capacity": {
+              "type": "int",
+              "defaultValue": 1,
+              "minValue": 1,
+              "maxValue": 30,
+              "metadata": {
+                "description": "Number of instances"
+              }
+            },
+            "reserved": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Reserved for Linux workers"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "[if(parameters('reserved'), 'linux', 'windows')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "[parameters('skuTier')]",
+                "capacity": "[parameters('capacity')]"
+              },
+              "properties": {
+                "reserved": "[parameters('reserved')]",
+                "targetWorkerCount": "[parameters('capacity')]",
+                "targetWorkerSizeId": 0
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan resource ID"
+              },
+              "value": "[resourceId('Microsoft.Web/serverfarms', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan name"
+              },
+              "value": "[parameters('name')]"
+            },
+            "resourceGroup": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan resource group"
+              },
+              "value": "[resourceGroup().name]"
+            }
+          }
+        }
+      }
+    },
+    "frontendApp": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "frontend-app-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('frontendAppName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "appServicePlanId": {
+            "value": "[reference('appServicePlan').outputs.id.value]"
+          },
+          "subnetId": {
+            "value": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), variables('privateSubnetName'))]"
+          },
+          "appSettings": {
+            "value": [
+              {
+                "name": "REACT_APP_API_URL",
+                "value": "[format('https://{0}.azurewebsites.net', variables('backendAppName'))]"
+              },
+              {
+                "name": "REACT_APP_ENVIRONMENT",
+                "value": "[parameters('environment')]"
+              },
+              {
+                "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                "value": "18-lts"
+              },
+              {
+                "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                "value": "true"
+              }
+            ]
+          },
+          "linuxFxVersion": {
+            "value": "NODE|18-lts"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.35.1.17967",
+              "templateHash": "6761192311034137034"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the App Service"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the App Service"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags for the App Service"
+              }
+            },
+            "appServicePlanId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan resource ID"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Subnet ID for VNet integration"
+              }
+            },
+            "appSettings": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Application settings"
+              }
+            },
+            "linuxFxVersion": {
+              "type": "string",
+              "defaultValue": "NODE|18-lts",
+              "metadata": {
+                "description": "Linux FX Version (e.g., NODE|18-lts, PYTHON|3.11)"
+              }
+            },
+            "httpsOnly": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable HTTPS only"
+              }
+            },
+            "enableVNetIntegration": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable VNet integration"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "app,linux",
+              "properties": {
+                "serverFarmId": "[parameters('appServicePlanId')]",
+                "httpsOnly": "[parameters('httpsOnly')]",
+                "clientAffinityEnabled": false,
+                "virtualNetworkSubnetId": "[if(and(parameters('enableVNetIntegration'), not(empty(parameters('subnetId')))), parameters('subnetId'), null())]",
+                "siteConfig": {
+                  "linuxFxVersion": "[parameters('linuxFxVersion')]",
+                  "alwaysOn": true,
+                  "ftpsState": "FtpsOnly",
+                  "minTlsVersion": "1.2",
+                  "http20Enabled": true,
+                  "webSocketsEnabled": false,
+                  "requestTracingEnabled": true,
+                  "httpLoggingEnabled": true,
+                  "detailedErrorLoggingEnabled": true,
+                  "use32BitWorkerProcess": false,
+                  "managedPipelineMode": "Integrated",
+                  "remoteDebuggingEnabled": false,
+                  "scmType": "None",
+                  "appSettings": "[parameters('appSettings')]",
+                  "cors": {
+                    "allowedOrigins": [
+                      "*"
+                    ],
+                    "supportCredentials": false
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service resource ID"
+              },
+              "value": "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service name"
+              },
+              "value": "[parameters('name')]"
+            },
+            "defaultHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service default host name"
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01').defaultHostName]"
+            },
+            "url": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service URL"
+              },
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01').defaultHostName)]"
+            },
+            "kind": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service kind"
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01', 'full').kind]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appServicePlan",
+        "vnet"
+      ]
+    },
+    "backendApp": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "backend-app-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('backendAppName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "appServicePlanId": {
+            "value": "[reference('appServicePlan').outputs.id.value]"
+          },
+          "subnetId": {
+            "value": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), variables('privateSubnetName'))]"
+          },
+          "appSettings": {
+            "value": [
+              {
+                "name": "DATABASE_URL",
+                "value": "[format('mssql+pyodbc://{0}:{1}@{2}.database.windows.net:1433/{3}?driver=ODBC+Driver+18+for+SQL+Server', parameters('sqlAdminUsername'), parameters('sqlAdminPassword'), variables('sqlServerName'), variables('sqlDatabaseName'))]"
+              },
+              {
+                "name": "STORAGE_CONNECTION_STRING",
+                "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', variables('storageAccountName'), listKeys('storageAccountResource', '2023-01-01').keys[0].value)]"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[reference('appInsights').ConnectionString]"
+              },
+              {
+                "name": "ENVIRONMENT",
+                "value": "[parameters('environment')]"
+              },
+              {
+                "name": "PYTHONPATH",
+                "value": "/home/site/wwwroot"
+              },
+              {
+                "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                "value": "true"
+              }
+            ]
+          },
+          "linuxFxVersion": {
+            "value": "PYTHON|3.11"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.35.1.17967",
+              "templateHash": "6761192311034137034"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the App Service"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the App Service"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags for the App Service"
+              }
+            },
+            "appServicePlanId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan resource ID"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Subnet ID for VNet integration"
+              }
+            },
+            "appSettings": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Application settings"
+              }
+            },
+            "linuxFxVersion": {
+              "type": "string",
+              "defaultValue": "NODE|18-lts",
+              "metadata": {
+                "description": "Linux FX Version (e.g., NODE|18-lts, PYTHON|3.11)"
+              }
+            },
+            "httpsOnly": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable HTTPS only"
+              }
+            },
+            "enableVNetIntegration": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable VNet integration"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "app,linux",
+              "properties": {
+                "serverFarmId": "[parameters('appServicePlanId')]",
+                "httpsOnly": "[parameters('httpsOnly')]",
+                "clientAffinityEnabled": false,
+                "virtualNetworkSubnetId": "[if(and(parameters('enableVNetIntegration'), not(empty(parameters('subnetId')))), parameters('subnetId'), null())]",
+                "siteConfig": {
+                  "linuxFxVersion": "[parameters('linuxFxVersion')]",
+                  "alwaysOn": true,
+                  "ftpsState": "FtpsOnly",
+                  "minTlsVersion": "1.2",
+                  "http20Enabled": true,
+                  "webSocketsEnabled": false,
+                  "requestTracingEnabled": true,
+                  "httpLoggingEnabled": true,
+                  "detailedErrorLoggingEnabled": true,
+                  "use32BitWorkerProcess": false,
+                  "managedPipelineMode": "Integrated",
+                  "remoteDebuggingEnabled": false,
+                  "scmType": "None",
+                  "appSettings": "[parameters('appSettings')]",
+                  "cors": {
+                    "allowedOrigins": [
+                      "*"
+                    ],
+                    "supportCredentials": false
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service resource ID"
+              },
+              "value": "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service name"
+              },
+              "value": "[parameters('name')]"
+            },
+            "defaultHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service default host name"
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01').defaultHostName]"
+            },
+            "url": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service URL"
+              },
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01').defaultHostName)]"
+            },
+            "kind": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service kind"
+              },
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-01-01', 'full').kind]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appInsights",
+        "appServicePlan",
+        "storageAccount",
+        "vnet"
+      ]
+    },
+    "applicationGateway": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "app-gateway-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('appGatewayName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "subnetId": {
+            "value": "[format('{0}/subnets/ApplicationGatewaySubnet', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')))]"
+          },
+          "publicIpId": {
+            "value": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-pip', variables('appGatewayName')))]"
+          },
+          "backendFqdn": {
+            "value": "[format('{0}.azurewebsites.net', variables('frontendAppName'))]"
+          },
+          "backendApiFqdn": {
+            "value": "[format('{0}.azurewebsites.net', variables('backendAppName'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.35.1.17967",
+              "templateHash": "15621978047857057590"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Application Gateway"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the Application Gateway"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags for the Application Gateway"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet ID for Application Gateway"
+              }
+            },
+            "publicIpId": {
+              "type": "string",
+              "metadata": {
+                "description": "Public IP resource ID"
+              }
+            },
+            "backendFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "Backend FQDN for frontend app"
+              }
+            },
+            "backendApiFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "Backend API FQDN for API app"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/applicationGateways",
+              "apiVersion": "2023-04-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "Standard_v2",
+                  "tier": "Standard_v2",
+                  "capacity": 1
+                },
+                "gatewayIPConfigurations": [
+                  {
+                    "name": "appGatewayIpConfig",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      }
+                    }
+                  }
+                ],
+                "frontendIPConfigurations": [
+                  {
+                    "name": "appGwPublicFrontendIp",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "publicIPAddress": {
+                        "id": "[parameters('publicIpId')]"
+                      }
+                    }
+                  }
+                ],
+                "frontendPorts": [
+                  {
+                    "name": "port_80",
+                    "properties": {
+                      "port": 80
+                    }
+                  },
+                  {
+                    "name": "port_443",
+                    "properties": {
+                      "port": 443
+                    }
+                  }
+                ],
+                "backendAddressPools": [
+                  {
+                    "name": "frontend-backend-pool",
+                    "properties": {
+                      "backendAddresses": [
+                        {
+                          "fqdn": "[parameters('backendFqdn')]"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "api-backend-pool",
+                    "properties": {
+                      "backendAddresses": [
+                        {
+                          "fqdn": "[parameters('backendApiFqdn')]"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "backendHttpSettingsCollection": [
+                  {
+                    "name": "frontend-http-setting",
+                    "properties": {
+                      "port": 443,
+                      "protocol": "Https",
+                      "cookieBasedAffinity": "Disabled",
+                      "pickHostNameFromBackendAddress": true,
+                      "requestTimeout": 30,
+                      "probe": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/probes', parameters('name'), 'frontend-health-probe')]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "api-http-setting",
+                    "properties": {
+                      "port": 443,
+                      "protocol": "Https",
+                      "cookieBasedAffinity": "Disabled",
+                      "pickHostNameFromBackendAddress": true,
+                      "requestTimeout": 30,
+                      "probe": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/probes', parameters('name'), 'api-health-probe')]"
+                      }
+                    }
+                  }
+                ],
+                "httpListeners": [
+                  {
+                    "name": "frontend-listener",
+                    "properties": {
+                      "frontendIPConfiguration": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', parameters('name'), 'appGwPublicFrontendIp')]"
+                      },
+                      "frontendPort": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/frontendPorts', parameters('name'), 'port_80')]"
+                      },
+                      "protocol": "Http",
+                      "requireServerNameIndication": false
+                    }
+                  }
+                ],
+                "requestRoutingRules": [
+                  {
+                    "name": "frontend-routing-rule",
+                    "properties": {
+                      "ruleType": "PathBasedRouting",
+                      "priority": 100,
+                      "httpListener": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/httpListeners', parameters('name'), 'frontend-listener')]"
+                      },
+                      "urlPathMap": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/urlPathMaps', parameters('name'), 'path-based-routing')]"
+                      }
+                    }
+                  }
+                ],
+                "urlPathMaps": [
+                  {
+                    "name": "path-based-routing",
+                    "properties": {
+                      "defaultBackendAddressPool": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools', parameters('name'), 'frontend-backend-pool')]"
+                      },
+                      "defaultBackendHttpSettings": {
+                        "id": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', parameters('name'), 'frontend-http-setting')]"
+                      },
+                      "pathRules": [
+                        {
+                          "name": "api-path-rule",
+                          "properties": {
+                            "paths": [
+                              "/api/*"
+                            ],
+                            "backendAddressPool": {
+                              "id": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools', parameters('name'), 'api-backend-pool')]"
+                            },
+                            "backendHttpSettings": {
+                              "id": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', parameters('name'), 'api-http-setting')]"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "probes": [
+                  {
+                    "name": "frontend-health-probe",
+                    "properties": {
+                      "protocol": "Https",
+                      "path": "/",
+                      "interval": 30,
+                      "timeout": 30,
+                      "unhealthyThreshold": 3,
+                      "pickHostNameFromBackendHttpSettings": true,
+                      "minServers": 0,
+                      "match": {
+                        "statusCodes": [
+                          "200-399"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "api-health-probe",
+                    "properties": {
+                      "protocol": "Https",
+                      "path": "/health",
+                      "interval": 30,
+                      "timeout": 30,
+                      "unhealthyThreshold": 3,
+                      "pickHostNameFromBackendHttpSettings": true,
+                      "minServers": 0,
+                      "match": {
+                        "statusCodes": [
+                          "200-399"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Gateway resource ID"
+              },
+              "value": "[resourceId('Microsoft.Network/applicationGateways', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Gateway name"
+              },
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "appGatewayPublicIP",
+        "vnet"
+      ]
+    }
+  },
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Group Name"
+      },
+      "value": "[resourceGroup().name]"
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Network Name"
+      },
+      "value": "[variables('vnetName')]"
+    },
+    "frontendUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Frontend App URL"
+      },
+      "value": "[format('https://{0}.azurewebsites.net', variables('frontendAppName'))]"
+    },
+    "backendUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Backend API URL"
+      },
+      "value": "[format('https://{0}.azurewebsites.net', variables('backendAppName'))]"
+    },
+    "applicationGatewayUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Gateway URL"
+      },
+      "value": "[format('https://{0}', reference('appGatewayPublicIP').dnsSettings.fqdn)]"
+    },
+    "sqlServerName": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL Server Name"
+      },
+      "value": "[variables('sqlServerName')]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL Database Name"
+      },
+      "value": "[variables('sqlDatabaseName')]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage Account Name"
+      },
+      "value": "[reference('storageAccount').outputs.name.value]"
+    },
+    "appInsightsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights Name"
+      },
+      "value": "[variables('appInsightsName')]"
+    },
+    "communicationServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Communication Service Name"
+      },
+      "value": "[variables('communicationServiceName')]"
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "metadata": {
+        "description": "App Service Plan SKU"
+      },
+      "value": "[format('{0} ({1})', parameters('appServiceSkuName'), parameters('appServiceSkuTier'))]"
+    },
+    "deploymentRegion": {
+      "type": "string",
+      "metadata": {
+        "description": "Deployment Region"
+      },
+      "value": "[parameters('location')]"
+    }
+  }
+}
