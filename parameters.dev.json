@@ -9,7 +9,7 @@
       "value": "East US"
     },
     "baseName": {
-      "value": "blueowl-gps"
+      "value": "bo-gpsc-reports"
     },
     "sqlAdminUsername": {
       "value": "sqladmin"

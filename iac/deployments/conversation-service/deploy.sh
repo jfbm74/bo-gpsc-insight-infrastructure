@@ -29,8 +29,8 @@ print_error() {
 # Configuración fija para evitar problemas
 ENVIRONMENT="dev"
 LOCATION="West US 2"
-RESOURCE_GROUP_NAME="blueowl-gps-dev-rg-v2"
-SUBSCRIPTION_ID="a4c82057-998a-4c04-9747-6147d5c11893"
+RESOURCE_GROUP_NAME="bo-gpsc-reports-dev-v2"
+SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
 PARAMETERS_FILE="parameters.dev.json"
 
 echo ""
@@ -56,7 +56,7 @@ fi
 az account set --subscription "$SUBSCRIPTION_ID"
 
 # Generate deployment name
-DEPLOYMENT_NAME="blueowl-gps-deployment-$(date +%Y%m%d-%H%M%S)"
+DEPLOYMENT_NAME="bo-gpsc-reports-deployment-$(date +%Y%m%d-%H%M%S)"
 
 print_status "🚀 SKIPPING VALIDATION - DEPLOYING DIRECTLY"
 print_status "Deployment name: $DEPLOYMENT_NAME"
@@ -110,12 +110,12 @@ if [[ $? -eq 0 ]]; then
     echo "   az resource list --resource-group $RESOURCE_GROUP_NAME --output table"
     echo ""
     echo "2. 🌐 Your application URLs:"
-    echo "   Frontend: https://blueowl-gps-dev-frontend.azurewebsites.net"
-    echo "   Backend:  https://blueowl-gps-dev-backend.azurewebsites.net"
+    echo "   Frontend: https://bo-gpsc-reports-dev-frontend.azurewebsites.net"
+    echo "   Backend:  https://bo-gpsc-reports-dev-backend.azurewebsites.net"
     echo ""
     echo "3. 🗃️ Database connection:"
-    echo "   Server: blueowl-gps-dev-sqlserver.database.windows.net" 
-    echo "   Database: blueowl-gps-dev-database"
+    echo "   Server: bo-gpsc-reports-dev-sqlserver.database.windows.net" 
+    echo "   Database: bo-gpsc-reports-dev-database"
     echo ""
     echo "4. 🧹 Clean up when done:"
     echo "   az group delete --name $RESOURCE_GROUP_NAME --yes --no-wait"

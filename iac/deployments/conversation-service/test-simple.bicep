@@ -8,7 +8,7 @@ param environment string = 'dev'
 param location string = resourceGroup().location
 
 @description('Base name')
-param baseName string = 'blueowl-gps'
+param baseName string = 'bo-gpsc-reports'
 
 var storageAccountName = replace('${baseName}${environment}test', '-', '')
 

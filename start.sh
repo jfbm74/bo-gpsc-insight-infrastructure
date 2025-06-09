@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # BLUE OWL GPS REPORTING - MASTER DEPLOYMENT SCRIPT
-# Complete Infrastructure Deployment from Zero to Production
+# Complete Infrastructure Deployment
 # ==============================================================================
 
 set -e
@@ -16,7 +16,6 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# ASCII Art Banner
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                    🦉 BLUE OWL GPS REPORTING                                 ║"
@@ -28,8 +27,8 @@ echo "╚═══════════════════════�
 echo -e "${NC}"
 
 # Configuration
-DEFAULT_SUBSCRIPTION_ID="a4c82057-998a-4c04-9747-6147d5c11893"
-DEFAULT_RESOURCE_GROUP="blueowl-gps-dev-rg"
+DEFAULT_SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
+DEFAULT_RESOURCE_GROUP="bo-gpsc-reports-dev"
 DEFAULT_LOCATION="East US"
 DEPLOYMENT_DIR="iac/deployments/conversation-service"
 
@@ -113,17 +112,17 @@ select_environment() {
         case $env_choice in
             1)
                 ENVIRONMENT="dev"
-                RESOURCE_GROUP="blueowl-gps-dev-rg"
+                RESOURCE_GROUP="bo-gpsc-reports-dev"
                 break
                 ;;
             2)
                 ENVIRONMENT="uat"
-                RESOURCE_GROUP="blueowl-gps-uat-rg"
+                RESOURCE_GROUP="bo-gpsc-reports-uat-rg"
                 break
                 ;;
             3)
                 ENVIRONMENT="prod"
-                RESOURCE_GROUP="blueowl-gps-prod-rg"
+                RESOURCE_GROUP="bo-gpsc-reports-prod-rg"
                 break
                 ;;
             *)
@@ -294,8 +293,8 @@ show_next_steps() {
         echo "🌐 Your infrastructure is now deployed!"
         echo ""
         echo "📡 Endpoints (will be available once apps are deployed):"
-        echo "  • Frontend:  https://blueowl-gps-$ENVIRONMENT-frontend.azurewebsites.net"
-        echo "  • Backend:   https://blueowl-gps-$ENVIRONMENT-backend.azurewebsites.net"
+        echo "  • Frontend:  https://bo-gpsc-reports-$ENVIRONMENT-frontend.azurewebsites.net"
+        echo "  • Backend:   https://bo-gpsc-reports-$ENVIRONMENT-backend.azurewebsites.net"
         echo "  • Gateway:   Check deployment outputs for Application Gateway URL"
         echo ""
         echo "🔧 Next Steps:"
@@ -306,8 +305,8 @@ show_next_steps() {
         echo "  5. Configure custom domains and SSL certificates"
         echo ""
         echo "📊 Monitoring:"
-        echo "  • Application Insights: blueowl-gps-$ENVIRONMENT-insights"
-        echo "  • Log Analytics: blueowl-gps-$ENVIRONMENT-logs"
+        echo "  • Application Insights: bo-gpsc-reports-$ENVIRONMENT-insights"
+        echo "  • Log Analytics: bo-gpsc-reports-$ENVIRONMENT-logs"
         echo ""
         echo "🗄️  Resources:"
         echo "  az resource list --resource-group $RESOURCE_GROUP --output table"

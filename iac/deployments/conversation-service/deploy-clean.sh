@@ -27,8 +27,8 @@ print_error() {
 }
 
 # Parse arguments or use defaults
-RESOURCE_GROUP_NAME="${1:-blueowl-gps-dev-rg}"
-SUBSCRIPTION_ID="${2:-a4c82057-998a-4c04-9747-6147d5c11893}"
+RESOURCE_GROUP_NAME="${1:-bo-gpsc-reports-dev}"
+SUBSCRIPTION_ID="${2:-086b4500-6281-444b-8430-40696735e453}"
 LOCATION="${3:-West US 2}"
 ENVIRONMENT="dev"
 PARAMETERS_FILE="parameters.dev.json"
@@ -44,7 +44,7 @@ echo "  • Location:         $LOCATION"
 echo "  • Resource Group:   $RESOURCE_GROUP_NAME"
 echo "  • Subscription:     $SUBSCRIPTION_ID"
 echo "  • Parameters File:  $PARAMETERS_FILE"
-echo "  • Base Name:        blueowl-gps (CLEAN)"
+echo "  • Base Name:        bo-gpsc-reports (CLEAN)"
 echo ""
 
 # Check Azure CLI authentication
@@ -66,7 +66,7 @@ else
 fi
 
 # Generate deployment name
-DEPLOYMENT_NAME="blueowl-gps-clean-$(date +%Y%m%d-%H%M%S)"
+DEPLOYMENT_NAME="bo-gpsc-reports-clean-$(date +%Y%m%d-%H%M%S)"
 
 print_status "STARTING CLEAN DEPLOYMENT (NO VALIDATION)"
 print_status "Deployment name: $DEPLOYMENT_NAME"
@@ -116,19 +116,19 @@ if [[ $? -eq 0 ]]; then
     print_status " CLEAN APPLICATION URLS"
     print_status "==================================================================="
     echo ""
-    echo "  • Frontend:  https://blueowl-gps-dev-frontend.azurewebsites.net"
-    echo "  • Backend:   https://blueowl-gps-dev-backend.azurewebsites.net"  
-    echo "  • Gateway:   https://blueowl-gps-dev-gateway.westus2.cloudapp.azure.com"
+    echo "  • Frontend:  https://bo-gpsc-reports-dev-frontend.azurewebsites.net"
+    echo "  • Backend:   https://bo-gpsc-reports-dev-backend.azurewebsites.net"  
+    echo "  • Gateway:   https://bo-gpsc-reports-dev-gateway.westus2.cloudapp.azure.com"
     echo ""
     
     print_status "Database Connection:"
-    echo "  • Server:   blueowl-gps-dev-sqlserver.database.windows.net"
-    echo "  • Database: blueowl-gps-dev-database"
+    echo "  • Server:   bo-gpsc-reports-dev-sqlserver.database.windows.net"
+    echo "  • Database: bo-gpsc-reports-dev-database"
     echo "  • Username: sqladmin"
     echo ""
     
     print_status "Monitoring:"
-    echo "  • Application Insights: blueowl-gps-dev-insights"
+    echo "  • Application Insights: bo-gpsc-reports-dev-insights"
     echo "  • Storage Account: blueowlgpsdevstorage"
     echo ""
     

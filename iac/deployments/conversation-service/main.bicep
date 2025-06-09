@@ -16,7 +16,7 @@ param environment string = 'dev'
 param location string = resourceGroup().location
 
 @description('Base name for all resources')
-param baseName string = 'blueowl-gps'
+param baseName string = 'bo-gpsc-reports'
 
 @description('Admin username for SQL Database')
 @secure()
@@ -67,7 +67,7 @@ var appGatewaySubnetPrefix = '10.0.2.0/24'
 // Tags
 var commonTags = {
   Environment: environment
-  Project: 'BlueOwl-GPS-Reporting'
+  Project: 'bo-gpsc-reports-Reporting'
   ManagedBy: 'Bicep'
   CreatedDate: timestamp
 }

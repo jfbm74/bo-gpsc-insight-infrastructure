@@ -17,8 +17,8 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-RESOURCE_GROUP="blueowl-gps-dev-rg"
-SUBSCRIPTION_ID="a4c82057-998a-4c04-9747-6147d5c11893"
+RESOURCE_GROUP="bo-gpsc-reports-dev"
+SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
 
 print_header() {
     echo -e "\n${BLUE}=================================================================${NC}"
@@ -102,45 +102,45 @@ found_resources=0
 
 # Virtual Network & Networking
 echo -e "\n${CYAN}🌐 Networking Resources:${NC}"
-check_resource "Microsoft.Network/virtualNetworks" "blueowl-gps-dev-vnet" "DEV Virtual Network"
+check_resource "Microsoft.Network/virtualNetworks" "bo-gpsc-reports-dev-vnet" "DEV Virtual Network"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.Network/networkSecurityGroups" "blueowl-gps-dev-nsg" "Network Security Group"
+check_resource "Microsoft.Network/networkSecurityGroups" "bo-gpsc-reports-dev-nsg" "Network Security Group"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.Network/applicationGateways" "blueowl-gps-dev-appgw" "DEV Application Gateway"
+check_resource "Microsoft.Network/applicationGateways" "bo-gpsc-reports-dev-appgw" "DEV Application Gateway"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.Network/publicIPAddresses" "blueowl-gps-dev-appgw-pip" "Application Gateway Public IP"
+check_resource "Microsoft.Network/publicIPAddresses" "bo-gpsc-reports-dev-appgw-pip" "Application Gateway Public IP"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
 # Compute Resources
 echo -e "\n${CYAN}⚡ Compute Resources:${NC}"
-check_resource "Microsoft.Web/serverfarms" "blueowl-gps-dev-asp" "App Service Plan (Basic Tier)"
+check_resource "Microsoft.Web/serverfarms" "bo-gpsc-reports-dev-asp" "App Service Plan (Basic Tier)"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.Web/sites" "blueowl-gps-dev-frontend" "React Frontend (Web App Service)"
+check_resource "Microsoft.Web/sites" "bo-gpsc-reports-dev-frontend" "React Frontend (Web App Service)"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.Web/sites" "blueowl-gps-dev-backend" "FastAPI Backend (App Service)"
+check_resource "Microsoft.Web/sites" "bo-gpsc-reports-dev-backend" "FastAPI Backend (App Service)"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
 # Database Resources
 echo -e "\n${CYAN}🗃️ Database Resources:${NC}"
-check_resource "Microsoft.Sql/servers" "blueowl-gps-dev-sqlserver" "Azure SQL Server"
+check_resource "Microsoft.Sql/servers" "bo-gpsc-reports-dev-sqlserver" "Azure SQL Server"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
 # SQL Database requires different verification method
-echo -n "  • Azure SQL Database (Standard S1): blueowl-gps-dev-database"
-if az sql db show --resource-group "$RESOURCE_GROUP" --server "blueowl-gps-dev-sqlserver" --name "blueowl-gps-dev-database" &>/dev/null; then
+echo -n "  • Azure SQL Database (Standard S1): bo-gpsc-reports-dev-database"
+if az sql db show --resource-group "$RESOURCE_GROUP" --server "bo-gpsc-reports-dev-sqlserver" --name "bo-gpsc-reports-dev-database" &>/dev/null; then
     echo -e " ${GREEN}✅${NC}"
     found_resources=$((found_resources + 1))
 else
@@ -156,7 +156,7 @@ if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
 # Communication Services
 echo -e "\n${CYAN}📧 Communication Resources:${NC}"
-check_resource "Microsoft.Communication/communicationServices" "blueowl-gps-dev-communication" "ACS Email Services"
+check_resource "Microsoft.Communication/communicationServices" "bo-gpsc-reports-dev-communication" "ACS Email Services"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
@@ -167,20 +167,20 @@ print_section "3. CROSS-ENVIRONMENT RESOURCES"
 
 # Monitoring Resources
 echo -e "\n${CYAN}📊 Monitoring Resources:${NC}"
-check_resource "Microsoft.Insights/components" "blueowl-gps-dev-insights" "Azure Monitor (Application Insights)"
+check_resource "Microsoft.Insights/components" "bo-gpsc-reports-dev-insights" "Azure Monitor (Application Insights)"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
-check_resource "Microsoft.OperationalInsights/workspaces" "blueowl-gps-dev-logs" "Log Analytics Workspace"
+check_resource "Microsoft.OperationalInsights/workspaces" "bo-gpsc-reports-dev-logs" "Log Analytics Workspace"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
 # Security Resources
 echo -e "\n${CYAN}🛡️ Security Resources:${NC}"
-echo -e "  ✅ ${GREEN}Network Security Groups${NC}: blueowl-gps-dev-nsg (Already counted above)"
+echo -e "  ✅ ${GREEN}Network Security Groups${NC}: bo-gpsc-reports-dev-nsg (Already counted above)"
 
 # Azure Firewall (Optional - not in current template)
-check_optional_resource "Microsoft.Network/azureFirewalls" "blueowl-gps-dev-firewall" "Azure Firewall (Advanced Protection)"
+check_optional_resource "Microsoft.Network/azureFirewalls" "bo-gpsc-reports-dev-firewall" "Azure Firewall (Advanced Protection)"
 
 # ==============================================================================
 # 4. DETAILED RESOURCE ANALYSIS
@@ -188,15 +188,15 @@ check_optional_resource "Microsoft.Network/azureFirewalls" "blueowl-gps-dev-fire
 print_section "4. DETAILED RESOURCE ANALYSIS"
 
 echo -e "\n${CYAN}🔍 Checking App Service Configuration:${NC}"
-FRONTEND_CONFIG=$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "blueowl-gps-dev-frontend" --query "linuxFxVersion" -o tsv 2>/dev/null || echo "ERROR")
-BACKEND_CONFIG=$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "blueowl-gps-dev-backend" --query "linuxFxVersion" -o tsv 2>/dev/null || echo "ERROR")
+FRONTEND_CONFIG=$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "bo-gpsc-reports-dev-frontend" --query "linuxFxVersion" -o tsv 2>/dev/null || echo "ERROR")
+BACKEND_CONFIG=$(az webapp config show --resource-group "$RESOURCE_GROUP" --name "bo-gpsc-reports-dev-backend" --query "linuxFxVersion" -o tsv 2>/dev/null || echo "ERROR")
 
 echo "  • Frontend Runtime: $FRONTEND_CONFIG"
 echo "  • Backend Runtime: $BACKEND_CONFIG"
 
 echo -e "\n${CYAN}🔍 Checking SQL Database Configuration:${NC}"
-SQL_TIER=$(az sql db show --resource-group "$RESOURCE_GROUP" --server "blueowl-gps-dev-sqlserver" --name "blueowl-gps-dev-database" --query "sku.tier" -o tsv 2>/dev/null || echo "ERROR")
-SQL_CAPACITY=$(az sql db show --resource-group "$RESOURCE_GROUP" --server "blueowl-gps-dev-sqlserver" --name "blueowl-gps-dev-database" --query "sku.capacity" -o tsv 2>/dev/null || echo "ERROR")
+SQL_TIER=$(az sql db show --resource-group "$RESOURCE_GROUP" --server "bo-gpsc-reports-dev-sqlserver" --name "bo-gpsc-reports-dev-database" --query "sku.tier" -o tsv 2>/dev/null || echo "ERROR")
+SQL_CAPACITY=$(az sql db show --resource-group "$RESOURCE_GROUP" --server "bo-gpsc-reports-dev-sqlserver" --name "bo-gpsc-reports-dev-database" --query "sku.capacity" -o tsv 2>/dev/null || echo "ERROR")
 
 echo "  • Database Tier: $SQL_TIER"
 echo "  • Database Capacity: $SQL_CAPACITY DTU"
@@ -234,18 +234,18 @@ fi
 print_section "7. QUICK ACCESS INFORMATION"
 
 echo -e "\n${CYAN}🌐 Application URLs:${NC}"
-echo "  • Frontend: https://blueowl-gps-dev-frontend.azurewebsites.net"
-echo "  • Backend: https://blueowl-gps-dev-backend.azurewebsites.net"
-echo "  • App Gateway: https://blueowl-gps-dev-gateway.westus2.cloudapp.azure.com"
+echo "  • Frontend: https://bo-gpsc-reports-dev-frontend.azurewebsites.net"
+echo "  • Backend: https://bo-gpsc-reports-dev-backend.azurewebsites.net"
+echo "  • App Gateway: https://bo-gpsc-reports-dev-gateway.westus2.cloudapp.azure.com"
 
 echo -e "\n${CYAN}🗃️ Database Connection:${NC}"
-echo "  • Server: blueowl-gps-dev-sqlserver.database.windows.net"
-echo "  • Database: blueowl-gps-dev-database"
+echo "  • Server: bo-gpsc-reports-dev-sqlserver.database.windows.net"
+echo "  • Database: bo-gpsc-reports-dev-database"
 echo "  • Username: sqladmin"
 
 echo -e "\n${CYAN}📊 Monitoring:${NC}"
-echo "  • Application Insights: blueowl-gps-dev-insights"
-echo "  • Log Analytics: blueowl-gps-dev-logs"
+echo "  • Application Insights: bo-gpsc-reports-dev-insights"
+echo "  • Log Analytics: bo-gpsc-reports-dev-logs"
 
 print_header "VERIFICATION COMPLETED!"
 

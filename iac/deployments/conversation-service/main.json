@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.35.1.17967",
-      "templateHash": "5880336025318810058"
+      "version": "0.36.1.42791",
+      "templateHash": "1235550909727131581"
     }
   },
   "parameters": {
@@ -26,7 +26,7 @@
     },
     "baseName": {
       "type": "string",
-      "defaultValue": "blueowl-gps",
+      "defaultValue": "bo-gpsc-reports",
       "metadata": {
         "description": "Base name for all resources"
       }
@@ -116,7 +116,7 @@
     "appGatewaySubnetPrefix": "10.0.2.0/24",
     "commonTags": {
       "Environment": "[parameters('environment')]",
-      "Project": "BlueOwl-GPS-Reporting",
+      "Project": "bo-gpsc-reports-Reporting",
       "ManagedBy": "Bicep",
       "CreatedDate": "[parameters('timestamp')]"
     }
@@ -380,8 +380,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.35.1.17967",
-              "templateHash": "13570190519474200581"
+              "version": "0.36.1.42791",
+              "templateHash": "13783286056028691840"
             }
           },
           "parameters": {
@@ -590,8 +590,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.35.1.17967",
-              "templateHash": "2601351272530433531"
+              "version": "0.36.1.42791",
+              "templateHash": "9832440125552877716"
             }
           },
           "parameters": {
@@ -770,8 +770,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.35.1.17967",
-              "templateHash": "6761192311034137034"
+              "version": "0.36.1.42791",
+              "templateHash": "9599141546911455720"
             }
           },
           "parameters": {
@@ -980,8 +980,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.35.1.17967",
-              "templateHash": "6761192311034137034"
+              "version": "0.36.1.42791",
+              "templateHash": "9599141546911455720"
             }
           },
           "parameters": {
@@ -1167,8 +1167,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.35.1.17967",
-              "templateHash": "15621978047857057590"
+              "version": "0.36.1.42791",
+              "templateHash": "9548660542174450923"
             }
           },
           "parameters": {

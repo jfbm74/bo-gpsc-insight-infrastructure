@@ -36,9 +36,9 @@ show_usage() {
     echo "  -h, --help            Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 -g blueowl-gps-dev-rg -s a4c82057-998a-4c04-9747-6147d5c11893"
-    echo "  $0 -g blueowl-gps-dev-rg -s a4c82057-998a-4c04-9747-6147d5c11893 -r -y"
-    echo "  $0 -g blueowl-gps-dev-rg -s a4c82057-998a-4c04-9747-6147d5c11893 -d"
+    echo "  $0 -g bo-gpsc-reports-dev -s 086b4500-6281-444b-8430-40696735e453"
+    echo "  $0 -g bo-gpsc-reports-dev -s 086b4500-6281-444b-8430-40696735e453 -r -y"
+    echo "  $0 -g bo-gpsc-reports-dev -s 086b4500-6281-444b-8430-40696735e453 -d"
 }
 
 print_status() {

@@ -20,8 +20,8 @@ echo "==========================================="
 echo -e "${NC}"
 
 # Configuration
-SUBSCRIPTION_ID="a4c82057-998a-4c04-9747-6147d5c11893"
-RESOURCE_GROUP_NAME="blueowl-gps-dev-rg"
+SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
+RESOURCE_GROUP_NAME="bo-gpsc-reports-dev"
 LOCATION="East US"
 
 # Step 1: Check Azure CLI login
@@ -100,7 +100,7 @@ cat > parameters.dev.json << EOF
       "value": "$LOCATION"
     },
     "baseName": {
-      "value": "blueowl-gps"
+      "value": "bo-gpsc-reports"
     },
     "sqlAdminUsername": {
       "value": "sqladmin"

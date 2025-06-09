@@ -53,10 +53,10 @@ The deployed infrastructure includes:
 4. **Run the deployment**:
    ```bash
    # Option 1: Interactive
-   ./deploy.sh -g blueowl-gps-dev-rg -s YOUR_SUBSCRIPTION_ID
+   ./deploy.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID
 
    # Option 2: Automated
-   ./deploy.sh -g blueowl-gps-dev-rg -s YOUR_SUBSCRIPTION_ID -y
+   ./deploy.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID -y
    ```
 
 ## Available Commands
@@ -67,10 +67,10 @@ The deployed infrastructure includes:
 ./deploy.sh -g <resource-group> -s <subscription-id>
 
 # With custom parameters
-./deploy.sh -g blueowl-gps-dev-rg -s 12345678-1234-1234-1234-123456789abc -e dev -l "East US 2"
+./deploy.sh -g bo-gpsc-reports-dev -s 12345678-1234-1234-1234-123456789abc -e dev -l "East US 2"
 
 # Without confirmation
-./deploy.sh -g blueowl-gps-dev-rg -s 12345678-1234-1234-1234-123456789abc -y
+./deploy.sh -g bo-gpsc-reports-dev -s 12345678-1234-1234-1234-123456789abc -y
 ```
 
 ### Cleanup
@@ -86,16 +86,16 @@ The deployed infrastructure includes:
 ```bash
 # Validate template without deploying
 az deployment group validate \
-  --resource-group blueowl-gps-dev-rg \
+  --resource-group bo-gpsc-reports-dev \
   --template-file main.bicep \
   --parameters @parameters.dev.json
 
 # List deployed resources
-az resource list --resource-group blueowl-gps-dev-rg --output table
+az resource list --resource-group bo-gpsc-reports-dev --output table
 
 # View deployment outputs
 az deployment group show \
-  --resource-group blueowl-gps-dev-rg \
+  --resource-group bo-gpsc-reports-dev \
   --name <deployment-name> \
   --query "properties.outputs"
 ```
@@ -109,14 +109,14 @@ After deployment, update the app settings:
 ```bash
 # For React Frontend
 az webapp config appsettings set \
-  --resource-group blueowl-gps-dev-rg \
-  --name blueowl-gps-dev-frontend \
-  --settings REACT_APP_API_URL="https://blueowl-gps-dev-backend.azurewebsites.net"
+  --resource-group bo-gpsc-reports-dev \
+  --name bo-gpsc-reports-dev-frontend \
+  --settings REACT_APP_API_URL="https://bo-gpsc-reports-dev-backend.azurewebsites.net"
 
 # For FastAPI Backend
 az webapp config appsettings set \
-  --resource-group blueowl-gps-dev-rg \
-  --name blueowl-gps-dev-backend \
+  --resource-group bo-gpsc-reports-dev \
+  --name bo-gpsc-reports-dev-backend \
   --settings DATABASE_URL="your-connection-string"
 ```
 
@@ -127,16 +127,16 @@ az webapp config appsettings set \
 cd /path/to/react-app
 npm run build
 az webapp deployment source config-zip \
-  --resource-group blueowl-gps-dev-rg \
-  --name blueowl-gps-dev-frontend \
+  --resource-group bo-gpsc-reports-dev \
+  --name bo-gpsc-reports-dev-frontend \
   --src build.zip
 
 # Deploy FastAPI Backend
 cd /path/to/fastapi-app
 zip -r app.zip .
 az webapp deployment source config-zip \
-  --resource-group blueowl-gps-dev-rg \
-  --name blueowl-gps-dev-backend \
+  --resource-group bo-gpsc-reports-dev \
+  --name bo-gpsc-reports-dev-backend \
   --src app.zip
 ```
 
@@ -157,9 +157,9 @@ conversation-service/
 
 After a successful deployment, you will have access to:
 
-- **Frontend**: `https://blueowl-gps-dev-frontend.azurewebsites.net`  
-- **Backend API**: `https://blueowl-gps-dev-backend.azurewebsites.net`  
-- **Application Gateway**: `https://blueowl-gps-dev-gateway.eastus2.cloudapp.azure.com`
+- **Frontend**: `https://bo-gpsc-reports-dev-frontend.azurewebsites.net`  
+- **Backend API**: `https://bo-gpsc-reports-dev-backend.azurewebsites.net`  
+- **Application Gateway**: `https://bo-gpsc-reports-dev-gateway.eastus2.cloudapp.azure.com`
 
 ## Security
 
@@ -180,12 +180,12 @@ After a successful deployment, you will have access to:
 
 ### Delete specific resources:
 ```bash
-./clean-up.sh -g blueowl-gps-dev-rg -s YOUR_SUBSCRIPTION_ID
+./clean-up.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID
 ```
 
 ### Delete entire resource group:
 ```bash
-./clean-up.sh -g blueowl-gps-dev-rg -s YOUR_SUBSCRIPTION_ID -r -y
+./clean-up.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID -r -y
 ```
 
 ##  Troubleshooting
@@ -204,7 +204,7 @@ After a successful deployment, you will have access to:
 3. **Template validation error**:
    ```bash
    az deployment group validate \
-     --resource-group blueowl-gps-dev-rg \
+     --resource-group bo-gpsc-reports-dev \
      --template-file main.bicep \
      --parameters @parameters.dev.json
    ```
@@ -217,13 +217,13 @@ After a successful deployment, you will have access to:
 ```bash
 # View deployment logs
 az deployment group show \
-  --resource-group blueowl-gps-dev-rg \
+  --resource-group bo-gpsc-reports-dev \
   --name deployment-name
 
 # View application logs
 az webapp log tail \
-  --resource-group blueowl-gps-dev-rg \
-  --name blueowl-gps-dev-backend
+  --resource-group bo-gpsc-reports-dev \
+  --name bo-gpsc-reports-dev-backend
 ```
 
 ## Support

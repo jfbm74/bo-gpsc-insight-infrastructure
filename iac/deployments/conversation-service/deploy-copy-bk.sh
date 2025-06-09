@@ -53,8 +53,8 @@ show_usage() {
     echo "  -h, --help            Show this help message"
     echo ""
     echo "Example:"
-    echo "  $0 -g blueowl-gps-dev-rg -s a4c82057-998a-4c04-9747-6147d5c11893"
-    echo "  $0 -g blueowl-gps-dev-rg -s a4c82057-998a-4c04-9747-6147d5c11893 -y"
+    echo "  $0 -g bo-gpsc-reports-dev -s 086b4500-6281-444b-8430-40696735e453"
+    echo "  $0 -g bo-gpsc-reports-dev -s 086b4500-6281-444b-8430-40696735e453 -y"
 }
 
 # Parse command line arguments
@@ -200,7 +200,7 @@ else
 fi
 
 # Generate deployment name
-DEPLOYMENT_NAME="blueowl-gps-deployment-$(date +%Y%m%d-%H%M%S)"
+DEPLOYMENT_NAME="bo-gpsc-reports-deployment-$(date +%Y%m%d-%H%M%S)"
 
 # Validate the template
 print_status "Validating Bicep template..."
@@ -265,8 +265,8 @@ if [[ $? -eq 0 ]]; then
     echo "   Check the deployment outputs above for URLs and connection strings"
     echo ""
     echo "3. Deploy your applications to the App Services:"
-    echo "   Frontend: blueowl-gps-dev-frontend.azurewebsites.net"
-    echo "   Backend:  blueowl-gps-dev-backend.azurewebsites.net"
+    echo "   Frontend: bo-gpsc-reports-dev-frontend.azurewebsites.net"
+    echo "   Backend:  bo-gpsc-reports-dev-backend.azurewebsites.net"
     echo ""
     echo "4. Monitor deployment:"
     echo "   az monitor activity-log list --resource-group $RESOURCE_GROUP_NAME"
