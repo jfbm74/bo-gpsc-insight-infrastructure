@@ -129,7 +129,7 @@ if [[ $? -eq 0 ]]; then
     
     print_status "Monitoring:"
     echo "  • Application Insights: bo-gpsc-reports-dev-insights"
-    echo "  • Storage Account: blueowlgpsdevstorage"
+    echo "  • Storage Account: bogpscreportsdevstorage"
     echo ""
     
 else

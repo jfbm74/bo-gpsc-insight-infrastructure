@@ -150,7 +150,7 @@ total_resources=$((total_resources + 1))
 
 # Storage Resources
 echo -e "\n${CYAN}📦 Storage Resources:${NC}"
-check_resource "Microsoft.Storage/storageAccounts" "blueowlgpsdevstorage" "Azure Blob Storage (Standard Performance)"
+check_resource "Microsoft.Storage/storageAccounts" "bogpscreportsdevstorage" "Azure Blob Storage (Standard Performance)"
 total_resources=$((total_resources + 1))
 if [ $? -eq 0 ]; then found_resources=$((found_resources + 1)); fi
 
@@ -202,8 +202,8 @@ echo "  • Database Tier: $SQL_TIER"
 echo "  • Database Capacity: $SQL_CAPACITY DTU"
 
 echo -e "\n${CYAN}🔍 Checking Storage Account:${NC}"
-STORAGE_TIER=$(az storage account show --resource-group "$RESOURCE_GROUP" --name "blueowlgpsdevstorage" --query "accessTier" -o tsv 2>/dev/null || echo "ERROR")
-STORAGE_REPLICATION=$(az storage account show --resource-group "$RESOURCE_GROUP" --name "blueowlgpsdevstorage" --query "sku.name" -o tsv 2>/dev/null || echo "ERROR")
+STORAGE_TIER=$(az storage account show --resource-group "$RESOURCE_GROUP" --name "bogpscreportsdevstorage" --query "accessTier" -o tsv 2>/dev/null || echo "ERROR")
+STORAGE_REPLICATION=$(az storage account show --resource-group "$RESOURCE_GROUP" --name "bogpscreportsdevstorage" --query "sku.name" -o tsv 2>/dev/null || echo "ERROR")
 
 echo "  • Access Tier: $STORAGE_TIER"
 echo "  • Replication: $STORAGE_REPLICATION"
