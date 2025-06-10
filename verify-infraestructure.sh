@@ -78,7 +78,7 @@ print_header "RESOURCE VERIFICATION REPORT"
 
 echo "📊 Subscription: $SUBSCRIPTION_ID"
 echo "📂 Resource Group: $RESOURCE_GROUP"
-echo "🌍 Region: West US 2"
+echo "🌍 Region: East US"
 echo ""
 
 # ==============================================================================
@@ -236,7 +236,7 @@ print_section "7. QUICK ACCESS INFORMATION"
 echo -e "\n${CYAN}🌐 Application URLs:${NC}"
 echo "  • Frontend: https://bo-gpsc-reports-dev-frontend.azurewebsites.net"
 echo "  • Backend: https://bo-gpsc-reports-dev-backend.azurewebsites.net"
-echo "  • App Gateway: https://bo-gpsc-reports-dev-gateway.westus2.cloudapp.azure.com"
+echo "  • App Gateway: https://bo-gpsc-reports-dev-gateway.eastus.cloudapp.azure.com"
 
 echo -e "\n${CYAN}🗃️ Database Connection:${NC}"
 echo "  • Server: bo-gpsc-reports-dev-sqlserver.database.windows.net"

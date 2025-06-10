@@ -308,6 +308,7 @@ module frontendApp '../../modules/compute/app-service/main.bicep' = {
     tags: commonTags
     appServicePlanId: appServicePlan.outputs.id
     subnetId: '${vnet.id}/subnets/${privateSubnetName}'
+    enableVNetIntegration: false
     appSettings: [
       {
         name: 'REACT_APP_API_URL'

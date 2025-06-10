@@ -28,7 +28,7 @@ print_error() {
 
 # Configuración fija para evitar problemas
 ENVIRONMENT="dev"
-LOCATION="West US 2"
+LOCATION="East US 2"
 RESOURCE_GROUP_NAME="bo-gpsc-reports-dev"
 SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
 PARAMETERS_FILE="parameters.dev.json"

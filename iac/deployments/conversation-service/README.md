@@ -67,7 +67,7 @@ The deployed infrastructure includes:
 ./deploy.sh -g <resource-group> -s <subscription-id>
 
 # With custom parameters
-./deploy.sh -g bo-gpsc-reports-dev -s 12345678-1234-1234-1234-123456789abc -e dev -l "East US 2"
+./deploy.sh -g bo-gpsc-reports-dev -s 12345678-1234-1234-1234-123456789abc -e dev -l "East US"
 
 # Without confirmation
 ./deploy.sh -g bo-gpsc-reports-dev -s 12345678-1234-1234-1234-123456789abc -y
@@ -159,7 +159,7 @@ After a successful deployment, you will have access to:
 
 - **Frontend**: `https://bo-gpsc-reports-dev-frontend.azurewebsites.net`  
 - **Backend API**: `https://bo-gpsc-reports-dev-backend.azurewebsites.net`  
-- **Application Gateway**: `https://bo-gpsc-reports-dev-gateway.eastus2.cloudapp.azure.com`
+- **Application Gateway**: `https://bo-gpsc-reports-dev-gateway.eastus.cloudapp.azure.com`
 
 ## Security
 

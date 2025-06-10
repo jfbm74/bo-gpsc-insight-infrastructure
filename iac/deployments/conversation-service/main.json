@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "1235550909727131581"
+      "templateHash": "16847881262802755730"
     }
   },
   "parameters": {
@@ -739,6 +739,9 @@
           },
           "subnetId": {
             "value": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), variables('privateSubnetName'))]"
+          },
+          "enableVNetIntegration": {
+            "value": false
           },
           "appSettings": {
             "value": [

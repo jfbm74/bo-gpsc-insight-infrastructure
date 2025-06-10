@@ -29,7 +29,7 @@ print_error() {
 # Parse arguments or use defaults
 RESOURCE_GROUP_NAME="${1:-bo-gpsc-reports-dev}"
 SUBSCRIPTION_ID="${2:-086b4500-6281-444b-8430-40696735e453}"
-LOCATION="${3:-West US 2}"
+LOCATION="${3:-East US }"
 ENVIRONMENT="dev"
 PARAMETERS_FILE="parameters.dev.json"
 
@@ -118,7 +118,7 @@ if [[ $? -eq 0 ]]; then
     echo ""
     echo "  • Frontend:  https://bo-gpsc-reports-dev-frontend.azurewebsites.net"
     echo "  • Backend:   https://bo-gpsc-reports-dev-backend.azurewebsites.net"  
-    echo "  • Gateway:   https://bo-gpsc-reports-dev-gateway.westus2.cloudapp.azure.com"
+    echo "  • Gateway:   https://bo-gpsc-reports-dev-gateway.eastus.cloudapp.azure.com"
     echo ""
     
     print_status "Database Connection:"
