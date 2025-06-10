@@ -213,6 +213,7 @@ module storageAccount '../../modules/storage/blob/main.bicep' = {
       'uploads'
       'reports'
       'temp'
+      'dev-logs'
     ]
   }
 }
@@ -308,7 +309,7 @@ module frontendApp '../../modules/compute/app-service/main.bicep' = {
     tags: commonTags
     appServicePlanId: appServicePlan.outputs.id
     subnetId: '${vnet.id}/subnets/${privateSubnetName}'
-    enableVNetIntegration: false
+    enableVNetIntegration: true
     appSettings: [
       {
         name: 'REACT_APP_API_URL'
@@ -340,6 +341,7 @@ module backendApp '../../modules/compute/app-service/main.bicep' = {
     tags: commonTags
     appServicePlanId: appServicePlan.outputs.id
     subnetId: '${vnet.id}/subnets/${privateSubnetName}'
+    enableVNetIntegration: true
     appSettings: [
       {
         name: 'DATABASE_URL'

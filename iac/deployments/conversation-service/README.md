@@ -185,7 +185,7 @@ After a successful deployment, you will have access to:
 
 ### Delete entire resource group:
 ```bash
-./clean-up.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID -r -y
+./clean-up.sh -g bo-gpsc-reports-dev -s YOUR_SUBSCRIPTION_ID -y
 ```
 
 ##  Troubleshooting

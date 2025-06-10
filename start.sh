@@ -230,13 +230,13 @@ show_deployment_summary() {
         # Estimate costs
         case $ENVIRONMENT in
             "dev")
-                echo "💰 Estimated monthly costs: ~$50-100 USD (Free tier resources)"
+                echo "💰 Estimated monthly costs: "
                 ;;
             "uat")
-                echo "💰 Estimated monthly costs: ~$200-400 USD (Standard tier resources)"
+                echo "💰 Estimated monthly costs: "
                 ;;
             "prod")
-                echo "💰 Estimated monthly costs: ~$500-1000+ USD (Premium tier resources)"
+                echo "💰 Estimated monthly costs: "
                 ;;
         esac
         echo ""
@@ -268,7 +268,7 @@ execute_deployment() {
             print_header "RUNNING CLEAN & DEPLOY"
             cd "$DEPLOYMENT_DIR"
             if [[ -f "clean-up.sh" ]]; then
-                ./clean-up.sh -g "$RESOURCE_GROUP" -s "$SUBSCRIPTION_ID" -r -y
+                ./clean-up.sh -g "$RESOURCE_GROUP" -s "$SUBSCRIPTION_ID" -y
             fi
             ./setup-complete.sh
             ./deploy.sh -g "$RESOURCE_GROUP" -s "$SUBSCRIPTION_ID" -e "$ENVIRONMENT" -l "$DEFAULT_LOCATION" -y
@@ -312,7 +312,7 @@ show_next_steps() {
         echo "  az resource list --resource-group $RESOURCE_GROUP --output table"
         echo ""
         echo "🧹 Cleanup (when done):"
-        echo "  cd $DEPLOYMENT_DIR && ./clean-up.sh -g $RESOURCE_GROUP -s $SUBSCRIPTION_ID -r -y"
+        echo "  cd $DEPLOYMENT_DIR && ./clean-up.sh -g $RESOURCE_GROUP -s $SUBSCRIPTION_ID -y"
     fi
 }
 

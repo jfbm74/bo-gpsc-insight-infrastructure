@@ -21,10 +21,10 @@
       "value": "20.75.159.17"
     },
     "appServiceSkuName": {
-      "value": "F1"
+      "value": "B1"
     },
     "appServiceSkuTier": {
-      "value": "Free"
+      "value": "Basic"
     }
   }
 }
