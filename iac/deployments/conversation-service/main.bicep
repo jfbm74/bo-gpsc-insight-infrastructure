@@ -26,9 +26,6 @@ param sqlAzureAdAdminObjectId string = ''
 @description('Azure AD admin name for SQL Server (email or group name)')
 param sqlAzureAdAdminName string = ''
 
-@description('IP address for SQL firewall access')
-param yourIpAddress string
-
 @description('Current timestamp for unique naming')
 param timestamp string = utcNow()
 
@@ -56,7 +53,7 @@ var storageAccountName = replace('${baseName}${environment}storage', '-', '')
 var appInsightsName = '${namingPrefix}-insights'
 var logAnalyticsName = '${namingPrefix}-logs'
 var nsgName = '${namingPrefix}-nsg'
-var communicationServiceName = '${namingPrefix}-communication'
+// var communicationServiceName = '${namingPrefix}-communication'
 
 // Network Configuration
 var vnetAddressPrefix = '10.0.0.0/16'
@@ -454,7 +451,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
       appSettings: [
         {
           name: 'DATABASE_SERVER'
-          value: '${sqlServerName}.database.windows.net'
+          value: '${sqlServerName}.${az.environment().suffixes.sqlServerHostname}'
         }
         {
           name: 'DATABASE_NAME'

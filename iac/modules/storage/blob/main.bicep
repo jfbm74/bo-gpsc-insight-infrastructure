@@ -40,11 +40,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: true
-    defaultToOAuthAuthentication: false
-    publicNetworkAccess: 'Enabled'
+    allowSharedKeyAccess: false
+    defaultToOAuthAuthentication: true
+    publicNetworkAccess: 'Disabled'
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: 'Deny'
       bypass: 'AzureServices'
     }
     encryption: {
@@ -94,7 +94,7 @@ resource blobContainers 'Microsoft.Storage/storageAccounts/blobServices/containe
 }]
 
 // ==============================================================================
-// OUTPUTS (SIN SECRETOS)
+// OUTPUTS
 // ==============================================================================
 
 @description('Storage Account resource ID')
@@ -106,5 +106,3 @@ output name string = storageAccount.name
 @description('Storage Account primary endpoints')
 output primaryEndpoints object = storageAccount.properties.primaryEndpoints
 
-// REMOVIDO: connectionString y primaryAccessKey por seguridad
-// Estas se pueden obtener en el template principal usando referenceConnection functions
