@@ -26,6 +26,9 @@ param sqlAzureAdAdminObjectId string = ''
 @description('Azure AD admin name for SQL Server (email or group name)')
 param sqlAzureAdAdminName string = ''
 
+@description('IP address for SQL firewall access')
+param yourIpAddress string
+
 @description('Current timestamp for unique naming')
 param timestamp string = utcNow()
 
@@ -44,7 +47,6 @@ param appServiceSkuTier string = 'Basic'
 var namingPrefix = '${baseName}-${environment}'
 var vnetName = '${namingPrefix}-vnet'
 var privateSubnetName = '${namingPrefix}-private-subnet'
-var bastionSubnetName = 'AzureBastionSubnet'
 var appServicePlanName = '${namingPrefix}-asp'
 var frontendAppName = '${namingPrefix}-frontend'
 var backendAppName = '${namingPrefix}-backend'
@@ -55,13 +57,10 @@ var appInsightsName = '${namingPrefix}-insights'
 var logAnalyticsName = '${namingPrefix}-logs'
 var nsgName = '${namingPrefix}-nsg'
 var communicationServiceName = '${namingPrefix}-communication'
-var bastionName = '${namingPrefix}-bastion'
-var bastionPublicIpName = '${namingPrefix}-bastion-pip'
 
 // Network Configuration
 var vnetAddressPrefix = '10.0.0.0/16'
 var privateSubnetPrefix = '10.0.1.0/24'
-var bastionSubnetPrefix = '10.0.2.0/24'
 
 // Tags
 var commonTags = {
@@ -69,31 +68,46 @@ var commonTags = {
   Project: '${baseName}-Reporting'
   ManagedBy: 'Bicep'
   CreatedDate: timestamp
-  SecurityLevel: 'Private'
+  SecurityLevel: 'Restricted-Public'
+  PrivateEndpoints: 'Pending-IT-Approval'
 }
 
 // ==============================================================================
-// NETWORKING RESOURCES - PRIVATE FIRST
+// NETWORKING RESOURCES
 // ==============================================================================
 
-// Network Security Group - MUITO RESTRICTIVO
+// Network Security Group
 resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: nsgName
   location: location
   tags: commonTags
   properties: {
     securityRules: [
-      // DENY all inbound by default
+      // Allow HTTPS inbound
       {
-        name: 'DenyAllInbound'
+        name: 'AllowHTTPS'
         properties: {
-          protocol: '*'
+          protocol: 'Tcp'
           sourcePortRange: '*'
-          destinationPortRange: '*'
+          destinationPortRange: '443'
           sourceAddressPrefix: '*'
           destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 4000
+          access: 'Allow'
+          priority: 1000
+          direction: 'Inbound'
+        }
+      }
+      // Allow HTTP inbound (for Application Gateway)
+      {
+        name: 'AllowHTTP'
+        properties: {
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '80'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 1010
           direction: 'Inbound'
         }
       }
@@ -107,11 +121,11 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
           sourceAddressPrefix: 'VirtualNetwork'
           destinationAddressPrefix: 'VirtualNetwork'
           access: 'Allow'
-          priority: 1000
+          priority: 1020
           direction: 'Inbound'
         }
       }
-      // Allow Azure Load Balancer (required for App Services)
+      // Allow Azure Load Balancer (for App Services)
       {
         name: 'AllowAzureLoadBalancer'
         properties: {
@@ -121,11 +135,11 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
           sourceAddressPrefix: 'AzureLoadBalancer'
           destinationAddressPrefix: '*'
           access: 'Allow'
-          priority: 1010
+          priority: 1030
           direction: 'Inbound'
         }
       }
-      // Allow App Service Management (required for App Services)
+      // Allow App Service Management (for App Services)
       {
         name: 'AllowAppServiceManagement'
         properties: {
@@ -135,7 +149,7 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
           sourceAddressPrefix: 'AppServiceManagement'
           destinationAddressPrefix: '*'
           access: 'Allow'
-          priority: 1020
+          priority: 1040
           direction: 'Inbound'
         }
       }
@@ -168,16 +182,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
               }
             }
           ]
-          // Security configurations
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }
-      {
-        name: bastionSubnetName
-        properties: {
-          addressPrefix: bastionSubnetPrefix
-          // Bastion subnet cannot have NSG
         }
       }
     ]
@@ -185,10 +191,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
 }
 
 // ==============================================================================
-// MONITORING & LOGGING - PRIVATE
+// MONITORING & LOGGING
 // ==============================================================================
 
-// Log Analytics Workspace - PRIVATE
+// Log Analytics Workspace
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
   location: location
@@ -203,7 +209,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-// Application Insights - PRIVATE
+// Application Insights
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
   location: location
@@ -220,10 +226,10 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // ==============================================================================
-// DATABASE RESOURCES - COMPLETELY PRIVATE
+// DATABASE RESOURCES
 // ==============================================================================
 
-// SQL Server - NO PUBLIC ACCESS + Azure AD Authentication
+// SQL Server - 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: sqlServerName
   location: location
@@ -234,11 +240,11 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   properties: {
     publicNetworkAccess: 'Disabled'
     minimalTlsVersion: '1.2'
-    restrictOutboundNetworkAccess: 'Enabled'
-    // Azure AD authentication only - NO SQL authentication
+    restrictOutboundNetworkAccess: 'Disabled'
+    // Azure AD authentication configuration
     administrators: enableSqlAzureAdAuth && !empty(sqlAzureAdAdminObjectId) ? {
       administratorType: 'ActiveDirectory'
-      principalType: 'User' // or 'Group' if using a group
+      principalType: 'Group' // or 'Group' if using a group
       login: sqlAzureAdAdminName
       sid: sqlAzureAdAdminObjectId
       tenantId: subscription().tenantId
@@ -266,68 +272,11 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   }
 }
 
-// Private Endpoint for SQL Server
-resource sqlPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: '${sqlServerName}-pe'
-  location: location
-  tags: commonTags
-  properties: {
-    subnet: {
-      id: '${vnet.id}/subnets/${privateSubnetName}'
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'sql-connection'
-        properties: {
-          privateLinkServiceId: sqlServer.id
-          groupIds: ['sqlServer']
-        }
-      }
-    ]
-  }
-}
-
-// Private DNS Zone for SQL Server
-resource sqlPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink${az.environment().suffixes.sqlServerHostname}'
-  location: 'global'
-  tags: commonTags
-}
-
-// Link DNS Zone to VNet
-resource sqlPrivateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: sqlPrivateDnsZone
-  name: '${vnetName}-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: vnet.id
-    }
-  }
-}
-
-// DNS Zone Group for SQL Private Endpoint
-resource sqlPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-04-01' = {
-  parent: sqlPrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'config1'
-        properties: {
-          privateDnsZoneId: sqlPrivateDnsZone.id
-        }
-      }
-    ]
-  }
-}
-
 // ==============================================================================
-// STORAGE RESOURCES - COMPLETELY PRIVATE
+// STORAGE RESOURCES
 // ==============================================================================
 
-// Storage Account - NO PUBLIC ACCESS
+// Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -346,7 +295,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     defaultToOAuthAuthentication: true
     networkAcls: {
       defaultAction: 'Deny'
-      bypass: 'AzureServices'
+      bypass: 'AzureServices'      
+      // Allow access from VNet subnet (App Services connect)
+      virtualNetworkRules: [
+        {
+          id: '${vnet.id}/subnets/${privateSubnetName}'
+          action: 'Allow'
+        }
+      ]
     }
   }
 }
@@ -373,65 +329,8 @@ resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2
   }
 }]
 
-// Private Endpoint for Storage Account
-resource storagePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = {
-  name: '${storageAccountName}-pe'
-  location: location
-  tags: commonTags
-  properties: {
-    subnet: {
-      id: '${vnet.id}/subnets/${privateSubnetName}'
-    }
-    privateLinkServiceConnections: [
-      {
-        name: 'storage-connection'
-        properties: {
-          privateLinkServiceId: storageAccount.id
-          groupIds: ['blob']
-        }
-      }
-    ]
-  }
-}
-
-// Private DNS Zone for Storage
-resource storagePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.blob${az.environment().suffixes.storage}'
-  location: 'global'
-  tags: commonTags
-}
-
-// Link DNS Zone to VNet
-resource storagePrivateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: storagePrivateDnsZone
-  name: '${vnetName}-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: vnet.id
-    }
-  }
-}
-
-// DNS Zone Group for Storage Private Endpoint
-resource storagePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-04-01' = {
-  parent: storagePrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'config1'
-        properties: {
-          privateDnsZoneId: storagePrivateDnsZone.id
-        }
-      }
-    ]
-  }
-}
-
 // ==============================================================================
-// COMPUTE RESOURCES - PRIVATE WITH STRICT ACCESS CONTROLS
+// COMPUTE RESOURCES
 // ==============================================================================
 
 // App Service Plan
@@ -448,7 +347,7 @@ module appServicePlan '../../modules/compute/service-plan/main.bicep' = {
   }
 }
 
-// Frontend App - PRIVATE with VNet Integration
+// Frontend App
 resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
   name: frontendAppName
   location: location
@@ -475,7 +374,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
           description: 'Deny all access'
         }
       ]
-      ipSecurityRestrictions: [
+      ipSecurityRestrictions: [            // Only VNet access
         {
           vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
           action: 'Allow'
@@ -511,7 +410,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
   }
 }
 
-// Backend App - PRIVATE with VNet Integration + Managed Identity
+// Backend App
 resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
   name: backendAppName
   location: location
@@ -538,7 +437,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
           description: 'Deny all access'
         }
       ]
-      ipSecurityRestrictions: [
+      ipSecurityRestrictions: [            //Only VNet access
         {
           vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
           action: 'Allow'
@@ -555,7 +454,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
       appSettings: [
         {
           name: 'DATABASE_SERVER'
-          value: '${sqlServerName}.privatelink${az.environment().suffixes.sqlServerHostname}'
+          value: '${sqlServerName}.database.windows.net'
         }
         {
           name: 'DATABASE_NAME'
@@ -564,6 +463,10 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         {
           name: 'DATABASE_AUTH_TYPE'
           value: 'AZURE_AD'  // Azure AD authentication
+        }
+        {
+          name: 'STORAGE_ACCOUNT_NAME'
+          value: storageAccountName
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -583,60 +486,6 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         }
       ]
     }
-  }
-}
-
-// ==============================================================================
-// COMMUNICATION SERVICES
-// ==============================================================================
-
-// Azure Communication Services
-resource communicationService 'Microsoft.Communication/communicationServices@2023-04-01' = {
-  name: communicationServiceName
-  location: 'global'
-  tags: commonTags
-  properties: {
-    dataLocation: 'United States'
-  }
-}
-
-// ==============================================================================
-// SECURE ACCESS - AZURE BASTION
-// ==============================================================================
-
-// Public IP for Bastion (only public resource for admin access)
-resource bastionPublicIP 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
-  name: bastionPublicIpName
-  location: location
-  tags: commonTags
-  sku: {
-    name: 'Standard'
-    tier: 'Regional'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
-}
-
-// Azure Bastion for secure access
-resource bastion 'Microsoft.Network/bastionHosts@2023-04-01' = {
-  name: bastionName
-  location: location
-  tags: commonTags
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'IpConf'
-        properties: {
-          subnet: {
-            id: '${vnet.id}/subnets/${bastionSubnetName}'
-          }
-          publicIPAddress: {
-            id: bastionPublicIP.id
-          }
-        }
-      }
-    ]
   }
 }
 
@@ -687,41 +536,35 @@ output resourceGroupName string = resourceGroup().name
 @description('Virtual Network Name')
 output vnetName string = vnet.name
 
-@description('Frontend App URL (Private - accessible only via VNet)')
+@description('Frontend App URL')
 output frontendUrl string = 'https://${frontendAppName}.azurewebsites.net'
 
-@description('Backend API URL (Private - accessible only via VNet)')
+@description('Backend API URL')
 output backendUrl string = 'https://${backendAppName}.azurewebsites.net'
 
-@description('SQL Server Name (Private - accessible only via Private Endpoint)')
+@description('SQL Server Name')
 output sqlServerName string = sqlServer.name
 
 @description('SQL Database Name')
 output sqlDatabaseName string = sqlDatabase.name
 
-@description('Storage Account Name (Private - accessible only via Private Endpoint)')
+@description('Storage Account Name')
 output storageAccountName string = storageAccount.name
 
 @description('Application Insights Name')
 output appInsightsName string = appInsights.name
 
-@description('Communication Service Name')
-output communicationServiceName string = communicationService.name
-
-@description('Bastion Host Name (for secure access)')
-output bastionHostName string = bastion.name
+// @description('Communication Service Name')
+// output communicationServiceName string = communicationService.name
 
 @description('Security Level')
-output securityLevel string = 'PRIVATE - No public internet access except Bastion'
+output securityLevel string = 'Ready for Private Endpoints'
+
+@description('Private Endpoints Status')
+output privateEndpointsStatus string = ''
 
 @description('Access Method')
-output accessMethod string = 'Use Azure Bastion for secure access to all resources'
-
-@description('SQL Server Private Endpoint')
-output sqlServerPrivateEndpoint string = sqlPrivateEndpoint.name
-
-@description('Storage Private Endpoint')
-output storagePrivateEndpoint string = storagePrivateEndpoint.name
+output accessMethod string = 'Network ACLs provide security until Private Endpoints are approved'
 
 @description('App Service Plan SKU')
 output appServicePlanSku string = '${appServiceSkuName} (${appServiceSkuTier})'
