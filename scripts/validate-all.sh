@@ -122,7 +122,7 @@ validate_parameters() {
     local environments=("dev" "uat" "prod")
     
     for env in "${environments[@]}"; do
-        param_file="$DEPLOYMENTS_DIR/conversation-service/parameters.$env.json"
+        param_file="$DEPLOYMENTS_DIR/gpscreports/parameters.$env.json"
         
         if [[ -f "$param_file" ]]; then
             print_info "Validating parameters.$env.json"
@@ -158,8 +158,8 @@ validate_parameters() {
 validate_template_deployment() {
     print_header "VALIDATING TEMPLATE DEPLOYMENT (DRY RUN)"
     
-    local main_template="$DEPLOYMENTS_DIR/conversation-service/main.bicep"
-    local dev_params="$DEPLOYMENTS_DIR/conversation-service/parameters.dev.json"
+    local main_template="$DEPLOYMENTS_DIR/gpscreports/main.bicep"
+    local dev_params="$DEPLOYMENTS_DIR/gpscreports/parameters.dev.json"
     
     if [[ ! -f "$main_template" ]]; then
         print_error "Main template not found: $main_template"
@@ -181,7 +181,7 @@ validate_template_deployment() {
     az group create --name "$temp_rg" --location "East US" > /dev/null
     
     # Validate deployment
-    cd "$DEPLOYMENTS_DIR/conversation-service"
+    cd "$DEPLOYMENTS_DIR/gpscreports"
     
     if az deployment group validate \
         --resource-group "$temp_rg" \
@@ -213,8 +213,8 @@ validate_script_permissions() {
     
     local scripts=(
         "start.sh"
-        "iac/deployments/conversation-service/deploy.sh"
-        "iac/deployments/conversation-service/clean-up.sh"
+        "iac/deployments/gpscreports/deploy.sh"
+        "iac/deployments/gpscreports/clean-up.sh"
         "setup-complete.sh"
         "scripts/validate-all.sh"
     )
@@ -252,11 +252,11 @@ generate_report() {
     
     echo "🚀 Ready for deployment:"
     echo "  • Run: ./start.sh (from project root)"
-    echo "  • Or run: cd iac/deployments/conversation-service && ./deploy.sh"
+    echo "  • Or run: cd iac/deployments/gpscreports && ./deploy.sh"
     echo ""
     
     echo "📚 Additional checks you can run:"
-    echo "  • az bicep build --file iac/deployments/conversation-service/main.bicep"
+    echo "  • az bicep build --file iac/deployments/gpscreports/main.bicep"
     echo "  • az deployment group what-if --resource-group <rg-name> --template-file main.bicep"
     echo ""
 }

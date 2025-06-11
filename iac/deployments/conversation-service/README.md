@@ -30,7 +30,7 @@ The deployed infrastructure includes:
 
 1. **Clone the repository and navigate to the directory**:
    ```bash
-   cd iac/deployments/conversation-service
+   cd iac/deployments/gpscreports
    ```
 
 2. **Make the deployment scripts executable**:
@@ -143,7 +143,7 @@ az webapp deployment source config-zip \
 ## File Structure
 
 ```
-conversation-service/
+gpscreports/
 ├── main.bicep                 # Main template
 ├── parameters.dev.json        # DEV parameters
 ├── parameters.uat.json        # UAT parameters

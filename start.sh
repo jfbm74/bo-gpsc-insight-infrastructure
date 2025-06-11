@@ -30,7 +30,7 @@ echo -e "${NC}"
 DEFAULT_SUBSCRIPTION_ID="086b4500-6281-444b-8430-40696735e453"
 DEFAULT_RESOURCE_GROUP="bo-gpsc-reports-dev"
 DEFAULT_LOCATION="East US"
-DEPLOYMENT_DIR="iac/deployments/conversation-service"
+DEPLOYMENT_DIR="iac/deployments/gpscreports"
 
 # Functions
 print_header() {
@@ -63,9 +63,9 @@ check_prerequisites() {
     print_step "1" "Checking Prerequisites"
     
     # Check if running from correct directory
-    if [[ ! -f "iac/deployments/conversation-service/main.bicep" ]]; then
+    if [[ ! -f "iac/deployments/gpscreports/main.bicep" ]]; then
         print_error "Please run this script from the project root directory"
-        print_info "Expected structure: iac/deployments/conversation-service/main.bicep"
+        print_info "Expected structure: iac/deployments/gpscreports/main.bicep"
         exit 1
     fi
     
