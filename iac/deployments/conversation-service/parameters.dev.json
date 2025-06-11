@@ -11,14 +11,14 @@
     "baseName": {
       "value": "bo-gpsc-reports"
     },
-    "sqlAdminUsername": {
-      "value": "sqladmin"
+    "enableSqlAzureAdAuth": {
+      "value": true
     },
-    "sqlAdminPassword": {
-      "value": "ComplexPassword123!"
+    "sqlAzureAdAdminObjectId": {
+      "value": ""
     },
-    "yourIpAddress": {
-      "value": "20.75.159.17"
+    "sqlAzureAdAdminName": {
+      "value": ""
     },
     "appServiceSkuName": {
       "value": "B1"
