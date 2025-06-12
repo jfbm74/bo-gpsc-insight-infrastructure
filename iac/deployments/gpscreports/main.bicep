@@ -1,5 +1,5 @@
 // ==============================================================================
-// BLUE OWL GPS REPORTING
+// BLUE OWL GPS REPORTING - SECURE PRIVATE INFRASTRUCTURE
 // ==============================================================================
 
 targetScope = 'resourceGroup'
@@ -23,19 +23,26 @@ param enableSqlAzureAdAuth bool = true
 @description('Azure AD admin object ID for SQL Server')
 param sqlAzureAdAdminObjectId string = ''
 
-@description('Azure AD admin name for SQL Server (email or group name)')
+@description('Azure AD admin name for SQL Server')
 param sqlAzureAdAdminName string = ''
 
 @description('Current timestamp for unique naming')
 param timestamp string = utcNow()
 
-@description('App Service Plan SKU name (minimum B1 for VNet integration)')
-@allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1V2', 'P2V2', 'P3V2', 'P1V3', 'P2V3', 'P3V3'])
+@description('App Service Plan SKU')
+@allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1V2', 'P2V2', 'P3V2'])
 param appServiceSkuName string = 'B1'
 
 @description('App Service Plan SKU tier')
-@allowed(['Basic', 'Standard', 'Premium', 'PremiumV2', 'PremiumV3'])
+@allowed(['Basic', 'Standard', 'Premium', 'PremiumV2'])
 param appServiceSkuTier string = 'Basic'
+
+@description('Corporate network CIDR ranges for restricted access')
+param allowedCorporateNetworks array = [
+  '10.0.0.0/8'
+  '172.16.0.0/12'
+  '192.168.0.0/16'
+]
 
 // ==============================================================================
 // VARIABLES
@@ -44,6 +51,7 @@ param appServiceSkuTier string = 'Basic'
 var namingPrefix = '${baseName}-${environment}'
 var vnetName = '${namingPrefix}-vnet'
 var privateSubnetName = '${namingPrefix}-private-subnet'
+var privateEndpointSubnetName = '${namingPrefix}-pe-subnet'
 var appServicePlanName = '${namingPrefix}-asp'
 var frontendAppName = '${namingPrefix}-frontend'
 var backendAppName = '${namingPrefix}-backend'
@@ -53,62 +61,101 @@ var storageAccountName = replace('${baseName}${environment}storage', '-', '')
 var appInsightsName = '${namingPrefix}-insights'
 var logAnalyticsName = '${namingPrefix}-logs'
 var nsgName = '${namingPrefix}-nsg'
-// var communicationServiceName = '${namingPrefix}-communication'
+var peNsgName = '${namingPrefix}-pe-nsg'
+var keyVaultName = '${namingPrefix}-kv'
 
 // Network Configuration
-var vnetAddressPrefix = '10.0.0.0/16'
-var privateSubnetPrefix = '10.0.1.0/24'
+var vnetAddressPrefix = '10.100.0.0/16'
+var privateSubnetPrefix = '10.100.1.0/24'
+var privateEndpointSubnetPrefix = '10.100.2.0/24'
 
-// Tags
+// Security and Compliance Tags
 var commonTags = {
   Environment: environment
-  Project: '${baseName}-Reporting'
-  ManagedBy: 'Bicep'
+  Project: 'BO-GPSC-Reports'
+  ManagedBy: 'Bicep-IaC'
   CreatedDate: timestamp
-  SecurityLevel: 'Restricted-Public'
-  PrivateEndpoints: 'Pending-IT-Approval'
 }
 
 // ==============================================================================
 // NETWORKING RESOURCES
 // ==============================================================================
 
-// Network Security Group
-resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
+// Private Endpoint Subnet NSG
+resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
+  name: peNsgName
+  location: location
+  tags: commonTags
+  properties: {
+    securityRules: [
+      // Allow private endpoint traffic only
+      {
+        name: 'AllowPrivateEndpointInbound'
+        properties: {
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '443'
+          sourceAddressPrefixes: allowedCorporateNetworks
+          destinationAddressPrefix: 'VirtualNetwork'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+      // Deny all other inbound traffic
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Deny'
+          priority: 4096
+          direction: 'Inbound'
+        }
+      }
+      // Allow VNet internal outbound only
+      {
+        name: 'AllowVNetOutbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'VirtualNetwork'
+          access: 'Allow'
+          priority: 100
+          direction: 'Outbound'
+        }
+      }
+      // Deny all other outbound traffic
+      {
+        name: 'DenyAllOutbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Deny'
+          priority: 4096
+          direction: 'Outbound'
+        }
+      }
+    ]
+  }
+}
+
+// App Service Subnet NSG
+resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: nsgName
   location: location
   tags: commonTags
   properties: {
     securityRules: [
-      // Allow HTTPS inbound
-      {
-        name: 'AllowHTTPS'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '443'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 1000
-          direction: 'Inbound'
-        }
-      }
-      // Allow HTTP inbound (for Application Gateway)
-      {
-        name: 'AllowHTTP'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '80'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 1010
-          direction: 'Inbound'
-        }
-      }
-      // Allow VNet internal communication
+      // Allow internal VNet communication only
       {
         name: 'AllowVNetInbound'
         properties: {
@@ -118,21 +165,7 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
           sourceAddressPrefix: 'VirtualNetwork'
           destinationAddressPrefix: 'VirtualNetwork'
           access: 'Allow'
-          priority: 1020
-          direction: 'Inbound'
-        }
-      }
-      // Allow Azure Load Balancer (for App Services)
-      {
-        name: 'AllowAzureLoadBalancer'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: 'AzureLoadBalancer'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 1030
+          priority: 100
           direction: 'Inbound'
         }
       }
@@ -146,7 +179,21 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
           sourceAddressPrefix: 'AppServiceManagement'
           destinationAddressPrefix: '*'
           access: 'Allow'
-          priority: 1040
+          priority: 200
+          direction: 'Inbound'
+        }
+      }
+      // Deny all other inbound traffic
+      {
+        name: 'DenyAllOtherInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'Internet'
+          destinationAddressPrefix: '*'
+          access: 'Deny'
+          priority: 4096
           direction: 'Inbound'
         }
       }
@@ -154,7 +201,7 @@ resource privateSubnetNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' =
   }
 }
 
-// Virtual Network
+// Virtual Network with Private Subnets
 resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
   name: vnetName
   location: location
@@ -163,13 +210,17 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
     addressSpace: {
       addressPrefixes: [vnetAddressPrefix]
     }
+    dhcpOptions: {
+      dnsServers: []
+    }
     subnets: [
+      // App Services Subnet
       {
         name: privateSubnetName
         properties: {
           addressPrefix: privateSubnetPrefix
           networkSecurityGroup: {
-            id: privateSubnetNsg.id
+            id: appServiceNsg.id
           }
           delegations: [
             {
@@ -183,7 +234,46 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
       }
+      // Private Endpoints Subnet
+      {
+        name: privateEndpointSubnetName
+        properties: {
+          addressPrefix: privateEndpointSubnetPrefix
+          networkSecurityGroup: {
+            id: privateEndpointNsg.id
+          }
+          privateEndpointNetworkPolicies: 'Disabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+        }
+      }
     ]
+  }
+}
+
+// ==============================================================================
+// SECURITY RESOURCES
+// ==============================================================================
+
+// Key Vault for secrets management
+resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
+  name: keyVaultName
+  location: location
+  tags: commonTags
+  properties: {
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    tenantId: subscription().tenantId
+    publicNetworkAccess: 'Disabled'
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 90
+    enablePurgeProtection: true
+    networkAcls: {
+      defaultAction: 'Deny'
+      bypass: 'AzureServices'
+    }
   }
 }
 
@@ -191,7 +281,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
 // MONITORING & LOGGING
 // ==============================================================================
 
-// Log Analytics Workspace
+// Log Analytics Workspace (Private)
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
   location: location
@@ -200,13 +290,16 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    retentionInDays: 90
     publicNetworkAccessForIngestion: 'Disabled'
     publicNetworkAccessForQuery: 'Disabled'
+    features: {
+      enableLogAccessUsingOnlyResourcePermissions: true
+    }
   }
 }
 
-// Application Insights
+// Application Insights (Private)
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
   location: location
@@ -226,7 +319,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 // DATABASE RESOURCES
 // ==============================================================================
 
-// SQL Server - 
+// SQL Server (Private Only)
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: sqlServerName
   location: location
@@ -235,13 +328,12 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
     type: 'SystemAssigned'
   }
   properties: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Disabled' // No internet access
     minimalTlsVersion: '1.2'
     restrictOutboundNetworkAccess: 'Disabled'
-    // Azure AD authentication configuration
     administrators: enableSqlAzureAdAuth && !empty(sqlAzureAdAdminObjectId) ? {
       administratorType: 'ActiveDirectory'
-      principalType: 'Group' // or 'Group' if using a group
+      principalType: 'Group'
       login: sqlAzureAdAdminName
       sid: sqlAzureAdAdminObjectId
       tenantId: subscription().tenantId
@@ -250,7 +342,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-// SQL Database
+// SQL Database with encryption
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: sqlDatabaseName
@@ -265,7 +357,17 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 268435456000
     readScale: 'Disabled'
-    requestedBackupStorageRedundancy: 'Local'
+    requestedBackupStorageRedundancy: 'Geo'
+    isLedgerOn: true
+  }
+}
+
+// Transparent Data Encryption
+resource sqlDatabaseTDE 'Microsoft.Sql/servers/databases/transparentDataEncryption@2023-08-01-preview' = {
+  parent: sqlDatabase
+  name: 'current'
+  properties: {
+    state: 'Enabled'
   }
 }
 
@@ -280,7 +382,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   tags: commonTags
   kind: 'StorageV2'
   sku: {
-    name: 'Standard_LRS'
+    name: 'Standard_GRS'
   }
   properties: {
     accessTier: 'Hot'
@@ -290,16 +392,24 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     allowSharedKeyAccess: false
     publicNetworkAccess: 'Disabled'
     defaultToOAuthAuthentication: true
+    allowCrossTenantReplication: false
     networkAcls: {
       defaultAction: 'Deny'
-      bypass: 'AzureServices'      
-      // Allow access from VNet subnet (App Services connect)
-      virtualNetworkRules: [
-        {
-          id: '${vnet.id}/subnets/${privateSubnetName}'
-          action: 'Allow'
+      bypass: 'None'
+    }
+    encryption: {
+      services: {
+        blob: {
+          enabled: true
+          keyType: 'Account'
         }
-      ]
+        file: {
+          enabled: true
+          keyType: 'Account'
+        }
+      }
+      keySource: 'Microsoft.Storage'
+      requireInfrastructureEncryption: true
     }
   }
 }
@@ -311,18 +421,31 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
   properties: {
     deleteRetentionPolicy: {
       enabled: true
-      days: 7
+      days: 30
+    }
+    containerDeleteRetentionPolicy: {
+      enabled: true
+      days: 30
+    }
+    isVersioningEnabled: true
+    changeFeed: {
+      enabled: true
+      retentionInDays: 30
     }
   }
 }
 
-// Storage Containers
-var containerNames = ['uploads', 'reports', 'temp', 'dev-logs']
+// Storage Containers with proper security
+var containerNames = ['gpsc-uploads', 'gpsc-reports', 'gpsc-temp', 'gpsc-logs', 'gpsc-backups']
 resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = [for containerName in containerNames: {
   parent: blobService
   name: containerName
   properties: {
     publicAccess: 'None'
+    metadata: {
+      purpose: 'gpsc-reporting'
+      environment: environment
+    }
   }
 }]
 
@@ -331,16 +454,20 @@ resource containers 'Microsoft.Storage/storageAccounts/blobServices/containers@2
 // ==============================================================================
 
 // App Service Plan
-module appServicePlan '../../modules/compute/service-plan/main.bicep' = {
-  name: 'app-service-plan-deployment'
-  params: {
-    name: appServicePlanName
-    location: location
-    tags: commonTags
-    skuName: appServiceSkuName
-    skuTier: appServiceSkuTier
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+  name: appServicePlanName
+  location: location
+  tags: commonTags
+  kind: 'linux'
+  sku: {
+    name: appServiceSkuName
+    tier: appServiceSkuTier
     capacity: 1
+  }
+  properties: {
     reserved: true
+    targetWorkerCount: 1
+    targetWorkerSizeId: 0
   }
 }
 
@@ -354,7 +481,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
     type: 'SystemAssigned'
   }
   properties: {
-    serverFarmId: appServicePlan.outputs.id
+    serverFarmId: appServicePlan.id
     httpsOnly: true
     clientAffinityEnabled: false
     virtualNetworkSubnetId: '${vnet.id}/subnets/${privateSubnetName}'
@@ -363,26 +490,28 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
       alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      http20Enabled: true
       scmIpSecurityRestrictions: [
         {
           action: 'Deny'
           priority: 2147483647
           name: 'Deny all'
-          description: 'Deny all access'
+          description: 'Deny all access - Private endpoints only'
         }
       ]
-      ipSecurityRestrictions: [            // Only VNet access
+      ipSecurityRestrictions: [
+        // Only internal VNet access
         {
           vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
           action: 'Allow'
           priority: 100
-          name: 'Allow VNet'
+          name: 'Allow internal VNet only'
         }
         {
           action: 'Deny'
           priority: 2147483647
-          name: 'Deny all'
-          description: 'Deny all other access'
+          name: 'Deny all internet'
+          description: 'Block all internet access'
         }
       ]
       appSettings: [
@@ -399,8 +528,12 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
           value: '18-lts'
         }
         {
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
+          name: 'NODE_ENV'
+          value: 'production'
+        }
+        {
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1' // Route all traffic through VNet
         }
       ]
     }
@@ -417,7 +550,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
     type: 'SystemAssigned'
   }
   properties: {
-    serverFarmId: appServicePlan.outputs.id
+    serverFarmId: appServicePlan.id
     httpsOnly: true
     clientAffinityEnabled: false
     virtualNetworkSubnetId: '${vnet.id}/subnets/${privateSubnetName}'
@@ -426,32 +559,34 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
       alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      http20Enabled: true
       scmIpSecurityRestrictions: [
         {
           action: 'Deny'
           priority: 2147483647
           name: 'Deny all'
-          description: 'Deny all access'
+          description: 'Deny all access - Private endpoints only'
         }
       ]
-      ipSecurityRestrictions: [            //Only VNet access
+      ipSecurityRestrictions: [
+        // Only internal VNet access
         {
           vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
           action: 'Allow'
           priority: 100
-          name: 'Allow VNet'
+          name: 'Allow internal VNet only'
         }
         {
           action: 'Deny'
           priority: 2147483647
-          name: 'Deny all'
-          description: 'Deny all other access'
+          name: 'Deny all internet'
+          description: 'Block all internet access'
         }
       ]
       appSettings: [
         {
           name: 'DATABASE_SERVER'
-          value: '${sqlServerName}.${az.environment().suffixes.sqlServerHostname}'
+          value: '${sqlServerName}.database.windows.net'
         }
         {
           name: 'DATABASE_NAME'
@@ -459,7 +594,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'DATABASE_AUTH_TYPE'
-          value: 'AZURE_AD'  // Azure AD authentication
+          value: 'AZURE_AD_MANAGED_IDENTITY'
         }
         {
           name: 'STORAGE_ACCOUNT_NAME'
@@ -478,8 +613,8 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
           value: '/home/site/wwwroot'
         }
         {
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1' // Route all traffic through VNet
         }
       ]
     }
@@ -487,38 +622,49 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
 }
 
 // ==============================================================================
-// ROLE ASSIGNMENTS - MANAGED IDENTITY PERMISSIONS
+// RBAC ASSIGNMENTS
 // ==============================================================================
 
-// Backend App Managed Identity as SQL Database Contributor
-resource sqlDatabaseContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (enableSqlAzureAdAuth) {
+// Backend Managed Identity - SQL Database Contributor
+resource backendSqlRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (enableSqlAzureAdAuth) {
   name: guid(sqlDatabase.id, backendApp.id, 'SQL DB Contributor')
   scope: sqlDatabase
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '9b7fa17d-e63e-47b0-bb0a-15c516ac86ec') // SQL DB Contributor
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '9b7fa17d-e63e-47b0-bb0a-15c516ac86ec')
     principalId: backendApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-// Backend App Managed Identity as Storage Blob Data Contributor
-resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// Backend Managed Identity - Storage Blob Data Contributor
+resource backendStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, backendApp.id, 'Storage Blob Data Contributor')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
     principalId: backendApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-// Frontend App Managed Identity as Storage Blob Data Reader (if needed)
-resource frontendStorageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// Frontend Managed Identity - Storage Blob Data Reader
+resource frontendStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, frontendApp.id, 'Storage Blob Data Reader')
   scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1') // Storage Blob Data Reader
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
     principalId: frontendApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Backend Managed Identity - Key Vault Secrets User
+resource backendKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, backendApp.id, 'Key Vault Secrets User')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    principalId: backendApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -533,38 +679,38 @@ output resourceGroupName string = resourceGroup().name
 @description('Virtual Network Name')
 output vnetName string = vnet.name
 
-@description('Frontend App URL')
-output frontendUrl string = 'https://${frontendAppName}.azurewebsites.net'
+@description('Private Endpoint Subnet ID')
+output privateEndpointSubnetId string = '${vnet.id}/subnets/${privateEndpointSubnetName}'
 
-@description('Backend API URL')
-output backendUrl string = 'https://${backendAppName}.azurewebsites.net'
+@description('App Service Subnet ID')
+output appServiceSubnetId string = '${vnet.id}/subnets/${privateSubnetName}'
 
 @description('SQL Server Name')
 output sqlServerName string = sqlServer.name
 
-@description('SQL Database Name')
-output sqlDatabaseName string = sqlDatabase.name
+@description('SQL Server Resource ID')
+output sqlServerResourceId string = sqlServer.id
 
 @description('Storage Account Name')
 output storageAccountName string = storageAccount.name
 
+@description('Storage Account Resource ID')
+output storageAccountResourceId string = storageAccount.id
+
+@description('Key Vault Name')
+output keyVaultName string = keyVault.name
+
+@description('Key Vault Resource ID')
+output keyVaultResourceId string = keyVault.id
+
 @description('Application Insights Name')
 output appInsightsName string = appInsights.name
 
-// @description('Communication Service Name')
-// output communicationServiceName string = communicationService.name
+@description('Log Analytics Workspace Name')
+output logAnalyticsName string = logAnalytics.name
 
-@description('Security Level')
-output securityLevel string = 'Ready for Private Endpoints'
+@description('Frontend App Name')
+output frontendAppName string = frontendApp.name
 
-@description('Private Endpoints Status')
-output privateEndpointsStatus string = ''
-
-@description('Access Method')
-output accessMethod string = 'Network ACLs provide security until Private Endpoints are approved'
-
-@description('App Service Plan SKU')
-output appServicePlanSku string = '${appServiceSkuName} (${appServiceSkuTier})'
-
-@description('Deployment Region')
-output deploymentRegion string = location
+@description('Backend App Name')
+output backendAppName string = backendApp.name

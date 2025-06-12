@@ -15,16 +15,23 @@
       "value": true
     },
     "sqlAzureAdAdminObjectId": {
-      "value": ""
+      "value": "REPLACE_WITH_AZURE_AD_GROUP_OBJECT_ID"
     },
     "sqlAzureAdAdminName": {
-      "value": ""
+      "value": "juan.bustamante@blueowl.com"
     },
     "appServiceSkuName": {
       "value": "B1"
     },
     "appServiceSkuTier": {
       "value": "Basic"
+    },
+    "allowedCorporateNetworks": {
+      "value": [
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16"
+      ]
     }
   }
 }
