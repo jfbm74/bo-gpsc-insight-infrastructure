@@ -486,7 +486,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
     clientAffinityEnabled: false
     virtualNetworkSubnetId: '${vnet.id}/subnets/${privateSubnetName}'
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
+      linuxFxVersion: 'NODE|22-lts'
       alwaysOn: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -586,7 +586,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
       appSettings: [
         {
           name: 'DATABASE_SERVER'
-          value: '${sqlServerName}.database.windows.net'
+          value: '${sqlServerName}.${az.environment()suffixes.sqlServerHostname}'
         }
         {
           name: 'DATABASE_NAME'

@@ -1,89 +1,171 @@
 // ==============================================================================
-// APP SERVICE MODULE
+// COMPUTE RESOURCES
 // ==============================================================================
 
-@description('Name of the App Service')
-param name string
-
-@description('Location for the App Service')
-param location string
-
-@description('Tags for the App Service')
-param tags object
-
-@description('App Service Plan resource ID')
-param appServicePlanId string
-
-@description('Subnet ID for VNet integration')
-param subnetId string = ''
-
-@description('Application settings')
-param appSettings array = []
-
-@description('Linux FX Version (e.g., NODE|18-lts, PYTHON|3.11)')
-param linuxFxVersion string = 'NODE|18-lts'
-
-@description('Enable HTTPS only')
-param httpsOnly bool = true
-
-@description('Enable VNet integration')
-param enableVNetIntegration bool = true
-
-// ==============================================================================
-// RESOURCES
-// ==============================================================================
-
-// App Service
-resource appService 'Microsoft.Web/sites@2023-01-01' = {
-  name: name
+// App Service Plan
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+  name: appServicePlanName
   location: location
-  tags: tags
-  kind: 'app,linux'
+  tags: commonTags
+  kind: 'linux'
+  sku: {
+    name: appServiceSkuName
+    tier: appServiceSkuTier
+    capacity: 1
+  }
   properties: {
-    serverFarmId: appServicePlanId
-    httpsOnly: httpsOnly
+    reserved: true
+    targetWorkerCount: 1
+    targetWorkerSizeId: 0
+  }
+}
+
+// Frontend App
+resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: frontendAppName
+  location: location
+  tags: commonTags
+  kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    httpsOnly: true
     clientAffinityEnabled: false
-    virtualNetworkSubnetId: enableVNetIntegration && !empty(subnetId) ? subnetId : null
+    virtualNetworkSubnetId: '${vnet.id}/subnets/${privateSubnetName}'
     siteConfig: {
-      linuxFxVersion: linuxFxVersion
+      linuxFxVersion: 'NODE|22-lts'
       alwaysOn: true
-      ftpsState: 'FtpsOnly'
+      ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
-      webSocketsEnabled: false
-      requestTracingEnabled: true
-      httpLoggingEnabled: true
-      detailedErrorLoggingEnabled: true
-      use32BitWorkerProcess: false
-      managedPipelineMode: 'Integrated'
-      remoteDebuggingEnabled: false
-      scmType: 'None'
-      appSettings: appSettings
-      cors: {
-        allowedOrigins: [
-          '*'
-        ]
-        supportCredentials: false
-      }
+      scmIpSecurityRestrictions: [
+        {
+          action: 'Deny'
+          priority: 2147483647
+          name: 'Deny all'
+          description: 'Deny all access - Private endpoints only'
+        }
+      ]
+      ipSecurityRestrictions: [
+        // Only internal VNet access
+        {
+          vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
+          action: 'Allow'
+          priority: 100
+          name: 'Allow internal VNet only'
+        }
+        {
+          action: 'Deny'
+          priority: 2147483647
+          name: 'Deny all internet'
+          description: 'Block all internet access'
+        }
+      ]
+      appSettings: [
+        {
+          name: 'REACT_APP_API_URL'
+          value: 'https://${backendAppName}.azurewebsites.net'
+        }
+        {
+          name: 'REACT_APP_ENVIRONMENT'
+          value: environment
+        }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '18-lts'
+        }
+        {
+          name: 'NODE_ENV'
+          value: 'production'
+        }
+        {
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1' // Route all traffic through VNet
+        }
+      ]
     }
   }
 }
 
-// ==============================================================================
-// OUTPUTS
-// ==============================================================================
-
-@description('App Service resource ID')
-output id string = appService.id
-
-@description('App Service name')
-output name string = appService.name
-
-@description('App Service default host name')
-output defaultHostName string = appService.properties.defaultHostName
-
-@description('App Service URL')
-output url string = 'https://${appService.properties.defaultHostName}'
-
-@description('App Service kind')
-output kind string = appService.kind
+// Backend App
+resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: backendAppName
+  location: location
+  tags: commonTags
+  kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    httpsOnly: true
+    clientAffinityEnabled: false
+    virtualNetworkSubnetId: '${vnet.id}/subnets/${privateSubnetName}'
+    siteConfig: {
+      linuxFxVersion: 'PYTHON|3.11'
+      alwaysOn: true
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      http20Enabled: true
+      scmIpSecurityRestrictions: [
+        {
+          action: 'Deny'
+          priority: 2147483647
+          name: 'Deny all'
+          description: 'Deny all access - Private endpoints only'
+        }
+      ]
+      ipSecurityRestrictions: [
+        // Only internal VNet access
+        {
+          vnetSubnetResourceId: '${vnet.id}/subnets/${privateSubnetName}'
+          action: 'Allow'
+          priority: 100
+          name: 'Allow internal VNet only'
+        }
+        {
+          action: 'Deny'
+          priority: 2147483647
+          name: 'Deny all internet'
+          description: 'Block all internet access'
+        }
+      ]
+      appSettings: [
+        {
+          name: 'DATABASE_SERVER'
+          value: '${sqlServerName}.${az.environment()suffixes.sqlServerHostname}'
+        }
+        {
+          name: 'DATABASE_NAME'
+          value: sqlDatabaseName
+        }
+        {
+          name: 'DATABASE_AUTH_TYPE'
+          value: 'AZURE_AD_MANAGED_IDENTITY'
+        }
+        {
+          name: 'STORAGE_ACCOUNT_NAME'
+          value: storageAccountName
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
+        {
+          name: 'ENVIRONMENT'
+          value: environment
+        }
+        {
+          name: 'PYTHONPATH'
+          value: '/home/site/wwwroot'
+        }
+        {
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1' // Route all traffic through VNet
+        }
+      ]
+    }
+  }
+}
