@@ -1,5 +1,6 @@
 // ==============================================================================
 // BLUE OWL GPS REPORTING - VNET MODULE
+// Private Network Infrastructure (No Internet Access)
 // ==============================================================================
 
 targetScope = 'resourceGroup'
@@ -52,6 +53,7 @@ var nsgName = '${namingPrefix}-nsg'
 var peNsgName = '${namingPrefix}-pe-nsg'
 var mgmtNsgName = '${namingPrefix}-mgmt-nsg'
 
+// Security and Compliance Tags
 var commonTags = {
   Environment: environment
   Project: 'BO-GPSC-Reports'
@@ -73,6 +75,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
   tags: commonTags
   properties: {
     securityRules: [
+      // Allow HTTPS within VNet only (for private endpoints)
       {
         name: 'AllowVNetHttpsInbound'
         properties: {
@@ -86,6 +89,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Inbound'
         }
       }
+      // Allow VNet internal communication
       {
         name: 'AllowVNetInternalInbound'
         properties: {
@@ -99,6 +103,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Inbound'
         }
       }
+      // DENY ALL Internet access
       {
         name: 'DenyInternetInbound'
         properties: {
@@ -112,6 +117,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Inbound'
         }
       }
+      // DENY ALL other inbound traffic
       {
         name: 'DenyAllOtherInbound'
         properties: {
@@ -125,6 +131,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Inbound'
         }
       }
+      // Allow VNet internal outbound only
       {
         name: 'AllowVNetOutbound'
         properties: {
@@ -138,6 +145,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Outbound'
         }
       }
+      // DENY ALL Internet outbound
       {
         name: 'DenyInternetOutbound'
         properties: {
@@ -151,6 +159,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
           direction: 'Outbound'
         }
       }
+      // DENY ALL other outbound traffic
       {
         name: 'DenyAllOtherOutbound'
         properties: {
@@ -175,6 +184,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   tags: commonTags
   properties: {
     securityRules: [
+      // Allow VNet internal communication
       {
         name: 'AllowVNetInbound'
         properties: {
@@ -188,6 +198,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // Allow App Service Management (required for App Services)
       {
         name: 'AllowAppServiceManagement'
         properties: {
@@ -201,6 +212,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // Allow Load Balancer (Azure infrastructure)
       {
         name: 'AllowAzureLoadBalancer'
         properties: {
@@ -214,6 +226,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // DENY ALL Internet access
       {
         name: 'DenyInternetInbound'
         properties: {
@@ -227,6 +240,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // DENY ALL other inbound traffic
       {
         name: 'DenyAllOtherInbound'
         properties: {
@@ -240,6 +254,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // Allow VNet outbound
       {
         name: 'AllowVNetOutbound'
         properties: {
@@ -253,6 +268,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Outbound'
         }
       }
+      // Allow specific Azure services (for App Service functionality)
       {
         name: 'AllowAzureServicesOutbound'
         properties: {
@@ -266,6 +282,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Outbound'
         }
       }
+      // DENY Internet outbound (except what's explicitly allowed above)
       {
         name: 'DenyInternetOutbound'
         properties: {
@@ -290,6 +307,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   tags: commonTags
   properties: {
     securityRules: [
+      // Allow corporate networks access (for IT management)
       {
         name: 'AllowCorporateManagement'
         properties: {
@@ -303,6 +321,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // Allow VNet internal communication
       {
         name: 'AllowVNetInbound'
         properties: {
@@ -316,6 +335,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // DENY ALL Internet access
       {
         name: 'DenyInternetInbound'
         properties: {
@@ -329,6 +349,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
           direction: 'Inbound'
         }
       }
+      // DENY ALL other inbound
       {
         name: 'DenyAllOtherInbound'
         properties: {
@@ -350,6 +371,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
 // VIRTUAL NETWORK
 // ==============================================================================
 
+// Virtual Network - Completely Private
 resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
   name: vnetName
   location: location
@@ -359,10 +381,11 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
       addressPrefixes: [vnetAddressPrefix]
     }
     dhcpOptions: {
-      dnsServers: []
+      dnsServers: [] // Will use Azure-provided DNS initially
     }
-    enableDdosProtection: false
+    enableDdosProtection: false // Not needed for private networks
     subnets: [
+      // App Services Subnet (for Azure App Services)
       {
         name: privateSubnetName
         properties: {
@@ -380,9 +403,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
           ]
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
-          routeTable: null
+          routeTable: null // No custom routes needed initially
         }
       }
+      // Private Endpoints Subnet (for Azure PaaS services)
       {
         name: privateEndpointSubnetName
         properties: {
@@ -390,11 +414,12 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
           networkSecurityGroup: {
             id: privateEndpointNsg.id
           }
-          privateEndpointNetworkPolicies: 'Disabled'
+          privateEndpointNetworkPolicies: 'Disabled' // Required for private endpoints
           privateLinkServiceNetworkPolicies: 'Enabled'
           routeTable: null
         }
       }
+      // Management Subnet (for future IT resources)
       {
         name: managementSubnetName
         properties: {
@@ -409,4 +434,78 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
       }
     ]
   }
+}
+
+// ==============================================================================
+// OUTPUTS
+// ==============================================================================
+
+@description('Virtual Network Resource ID')
+output vnetId string = vnet.id
+
+@description('Virtual Network Name')
+output vnetName string = vnet.name
+
+@description('Virtual Network Address Space')
+output vnetAddressSpace array = vnet.properties.addressSpace.addressPrefixes
+
+@description('App Service Subnet Resource ID')
+output appServiceSubnetId string = '${vnet.id}/subnets/${privateSubnetName}'
+
+@description('App Service Subnet Name')
+output appServiceSubnetName string = privateSubnetName
+
+@description('Private Endpoint Subnet Resource ID')
+output privateEndpointSubnetId string = '${vnet.id}/subnets/${privateEndpointSubnetName}'
+
+@description('Private Endpoint Subnet Name')
+output privateEndpointSubnetName string = privateEndpointSubnetName
+
+@description('Management Subnet Resource ID')
+output managementSubnetId string = '${vnet.id}/subnets/${managementSubnetName}'
+
+@description('Management Subnet Name')
+output managementSubnetName string = managementSubnetName
+
+@description('App Service NSG Resource ID')
+output appServiceNsgId string = appServiceNsg.id
+
+@description('Private Endpoint NSG Resource ID')
+output privateEndpointNsgId string = privateEndpointNsg.id
+
+@description('Management NSG Resource ID')
+output managementNsgId string = managementNsg.id
+
+@description('Resource Group Name')
+output resourceGroupName string = resourceGroup().name
+
+@description('Deployment Environment')
+output environment string = environment
+
+@description('Security Configuration Summary')
+output securitySummary object = {
+  internetAccess: 'Completely Disabled'
+  networkSecurityGroups: 3
+  privateEndpointsReady: true
+  corporateNetworksAllowed: length(allowedCorporateNetworks)
+  subnets: [
+    {
+      name: privateSubnetName
+      purpose: 'App Services'
+      addressPrefix: privateSubnetPrefix
+      delegation: 'Microsoft.Web/serverFarms'
+    }
+    {
+      name: privateEndpointSubnetName
+      purpose: 'Private Endpoints'
+      addressPrefix: privateEndpointSubnetPrefix
+      delegation: 'None'
+    }
+    {
+      name: managementSubnetName
+      purpose: 'IT Management'
+      addressPrefix: managementSubnetPrefix
+      delegation: 'None'
+    }
+  ]
 }
