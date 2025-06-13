@@ -34,8 +34,8 @@ param vnetName string = ''
 @description('Subnet name for App Service VNet integration')
 param appServiceSubnetName string = ''
 
-@description('Enable Azure AD authentication for SQL Server')
-param enableSqlAzureAdAuth bool = true
+// @description('Enable Azure AD authentication for SQL Server')
+// param enableSqlAzureAdAuth bool = true
 
 // ==============================================================================
 // VARIABLES
@@ -125,7 +125,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
     clientAffinityEnabled: false
     virtualNetworkSubnetId: existingAppServiceSubnet.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
+      linuxFxVersion: 'NODE|22-lts'
       alwaysOn: appServiceSkuTier != 'Free'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -138,6 +138,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
           priority: 2147483647
           name: 'Deny all internet access'
           description: 'Block all external access - Private endpoints only'
+          ipAddress: '0.0.0.0/0'
         }
       ]
       
@@ -156,6 +157,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
           priority: 2147483647
           name: 'Deny all internet'
           description: 'Block all internet access completely'
+          ipAddress: '0.0.0.0/0'
         }
       ]
       
@@ -215,7 +217,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
     clientAffinityEnabled: false
     virtualNetworkSubnetId: existingAppServiceSubnet.id
     siteConfig: {
-      linuxFxVersion: 'PYTHON|3.11'
+      linuxFxVersion: 'PYTHON|3.13'
       alwaysOn: appServiceSkuTier != 'Free'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -228,6 +230,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
           priority: 2147483647
           name: 'Deny all internet access'
           description: 'Block all external access - Private endpoints only'
+          ipAddress: '0.0.0.0/0'
         }
       ]
       
@@ -246,6 +249,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
           priority: 2147483647
           name: 'Deny all internet'
           description: 'Block all internet access completely'
+          ipAddress: '0.0.0.0/0'
         }
       ]
       
@@ -322,100 +326,6 @@ resource backendVnetIntegration 'Microsoft.Web/sites/networkConfig@2023-01-01' =
   properties: {
     subnetResourceId: existingAppServiceSubnet.id
     swiftSupported: true
-  }
-}
-
-// ==============================================================================
-// DIAGNOSTIC SETTINGS
-// ==============================================================================
-
-// Frontend diagnostic settings
-resource frontendDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  scope: frontendApp
-  name: 'frontend-diagnostics'
-  properties: {
-    workspaceId: existingAppInsights.properties.WorkspaceResourceId
-    logs: [
-      {
-        category: 'AppServiceHTTPLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'AppServiceConsoleLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'AppServiceAppLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-  }
-}
-
-// Backend diagnostic settings
-resource backendDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  scope: backendApp
-  name: 'backend-diagnostics'
-  properties: {
-    workspaceId: existingAppInsights.properties.WorkspaceResourceId
-    logs: [
-      {
-        category: 'AppServiceHTTPLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'AppServiceConsoleLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'AppServiceAppLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
   }
 }
 

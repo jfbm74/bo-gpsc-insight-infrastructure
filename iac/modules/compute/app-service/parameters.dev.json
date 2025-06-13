@@ -22,9 +22,6 @@
     },
     "appServiceSubnetName": {
       "value": ""
-    },
-    "enableSqlAzureAdAuth": {
-      "value": true
     }
   }
 }

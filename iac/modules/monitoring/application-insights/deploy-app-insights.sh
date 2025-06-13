@@ -71,7 +71,7 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  # Deploy DEV environment"
-    echo "  $0 -e dev"
+    echo "  $0 -e dev  -g bo-gpsc-reports-dev"
     echo ""
     echo "  # Deploy UAT environment"
     echo "  $0 -e uat -g bo-gpsc-reports-uat"

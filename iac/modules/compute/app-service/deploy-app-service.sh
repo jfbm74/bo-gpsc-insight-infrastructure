@@ -2,7 +2,6 @@
 
 # ==============================================================================
 # BLUE OWL GPS REPORTING - APP SERVICE MODULE DEPLOYMENT
-# Deploy App Services with VNet Integration (No Internet Access)
 # ==============================================================================
 
 set -e
@@ -69,7 +68,7 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  # Deploy DEV environment"
-    echo "  $0 -e dev"
+    echo "  $0 -e dev -g bo-gpsc-reports-dev"
     echo ""
     echo "  # Deploy UAT environment"
     echo "  $0 -e uat -g bo-gpsc-reports-uat"
@@ -148,7 +147,7 @@ fi
 NAMING_PREFIX="bo-gpsc-reports-${ENVIRONMENT}"
 
 # Set parameters file path - use the global parameters file
-PARAMETERS_FILE="../../deployments/gpscreports/parameters.${ENVIRONMENT}.json"
+PARAMETERS_FILE="parameters.${ENVIRONMENT}.json"
 
 # Check if parameters file exists
 if [[ ! -f "$PARAMETERS_FILE" ]]; then

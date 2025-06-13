@@ -67,16 +67,16 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  # Deploy DEV environment"
-    echo "  $0 -e dev -g bo-gpsc-reports-dev-network"
+    echo "  $0 -e dev -g bo-gpsc-reports-dev"
     echo ""
     echo "  # Deploy UAT environment"
-    echo "  $0 -e uat -g bo-gpsc-reports-uat-network"
+    echo "  $0 -e uat -g bo-gpsc-reports-uat"
     echo ""
     echo "  # Deploy PROD environment"
-    echo "  $0 -e prod -g bo-gpsc-reports-prod-network"
+    echo "  $0 -e prod -g bo-gpsc-reports-prod"
     echo ""
     echo "  # Dry run (validation only)"
-    echo "  $0 -e dev -g bo-gpsc-reports-dev-network -d"
+    echo "  $0 -e dev -g bo-gpsc-reports-dev -d"
 }
 
 # Parse command line arguments
