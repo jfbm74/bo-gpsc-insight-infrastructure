@@ -1,6 +1,5 @@
 // ==============================================================================
 // BLUE OWL GPS REPORTING - VNET MODULE
-// Private Network Infrastructure (No Internet Access)
 // ==============================================================================
 
 targetScope = 'resourceGroup'
@@ -60,15 +59,13 @@ var commonTags = {
   ManagedBy: 'Bicep-IaC'
   CreatedDate: timestamp
   Module: 'VNet'
-  SecurityLevel: 'Private-Only'
-  InternetAccess: 'Disabled'
 }
 
 // ==============================================================================
 // NETWORK SECURITY GROUPS
 // ==============================================================================
 
-// Private Endpoint Subnet NSG - Ultra restrictive
+// Private Endpoint Subnet NSG
 resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: peNsgName
   location: location
@@ -177,7 +174,7 @@ resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01'
   }
 }
 
-// App Service Subnet NSG - Restrictive but allows App Service management
+// App Service Subnet NSG - allows App Service management
 resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: nsgName
   location: location
@@ -300,7 +297,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   }
 }
 
-// Management Subnet NSG - For future IT management resources
+// Management Subnet NSG - IT management resources
 resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
   name: mgmtNsgName
   location: location
@@ -371,7 +368,7 @@ resource managementNsg 'Microsoft.Network/networkSecurityGroups@2023-04-01' = {
 // VIRTUAL NETWORK
 // ==============================================================================
 
-// Virtual Network - Completely Private
+// Virtual Network
 resource vnet 'Microsoft.Network/virtualNetworks@2023-04-01' = {
   name: vnetName
   location: location
