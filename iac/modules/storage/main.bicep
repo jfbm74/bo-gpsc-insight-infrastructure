@@ -317,22 +317,22 @@ output privateEndpointRequirements array = [
       {
         subResourceType: 'blob'
         purpose: 'Blob storage access'
-        dnsZone: 'privatelink.blob.core.windows.net'
+        dnsZone: 'privatelink.blob.${environment().suffixes.storage}'
       }
       {
         subResourceType: 'file'
         purpose: 'File share access'
-        dnsZone: 'privatelink.file.core.windows.net'
+        dnsZone: 'privatelink.file.${environment().suffixes.storage}'
       }
       {
         subResourceType: 'table'
         purpose: 'Table storage access'
-        dnsZone: 'privatelink.table.core.windows.net'
+        dnsZone: 'privatelink.table.${environment().suffixes.storage}'
       }
       {
         subResourceType: 'queue'
         purpose: 'Queue storage access'
-        dnsZone: 'privatelink.queue.core.windows.net'
+        dnsZone: 'privatelink.queue.${environment().suffixes.storage}'
       }
     ]
   }

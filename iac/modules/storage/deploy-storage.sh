@@ -372,7 +372,7 @@ else
         echo "3. 📧 MANDATORY: Contact IT team to configure private endpoints:"
         echo "   • Storage Account: $STORAGE_NAME"
         echo "   • Sub-resources needed: blob, file, table, queue"
-        echo "   • DNS zones: privatelink.blob.core.windows.net, etc."
+        echo "   • DNS zones: privatelink.blob.<storage-suffix>, etc."
         echo "   • Target subnet: ${NAMING_PREFIX}-pe-subnet (must exist in VNet)"
         echo ""
         echo "4. 🔍 Verify deployment:"
