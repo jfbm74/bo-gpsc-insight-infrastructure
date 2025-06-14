@@ -1,29 +1,5 @@
 // ==============================================================================
-// EXISTING RESOURCES REFERENCES
-// ==============================================================================
-
-// Reference existing VNet (should be deployed first via VNet module)
-resource existingVnet 'Microsoft.Network/virtualNetworks@2023-04-01' existing = {
-  name: vnetResourceName
-  scope: resourceGroup(vnetResourceGroupName)
-}
-
-// Reference existing subnets
-resource existingAppServiceSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existing = {
-  parent: existingVnet
-  name: appServiceSubnetName
-}
-
-resource existingPrivateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existing = {
-  parent: existingVnet
-  name: privateEndpointSubnetName
-}
-
-resource existingManagementSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existing = {
-  parent: existingVnet
-  name: managementSubnetName
-}
-
+// STORAGE ACCOUNT
 // ==============================================================================
 // BLUE OWL GPS REPORTING - STORAGE MODULE (MAXIMUM SECURITY)
 // ==============================================================================
@@ -62,15 +38,6 @@ param enableAdvancedSecurity bool = true
 @maxValue(365)
 param dataRetentionDays int = 30
 
-@description('VNet Name for service endpoints (should match VNet module)')
-param vnetName string = ''
-
-@description('VNet Resource Group (if different from current)')
-param vnetResourceGroup string = ''
-
-@description('Enable service endpoints for immediate VNet access')
-param enableServiceEndpoints bool = true
-
 // ==============================================================================
 // VARIABLES
 // ==============================================================================
@@ -78,13 +45,6 @@ param enableServiceEndpoints bool = true
 var namingPrefix = '${baseName}-${environment}'
 // Storage account names have special restrictions: no hyphens, max 24 chars, lowercase only
 var storageAccountName = replace('${baseName}${environment}storage', '-', '')
-
-// VNet integration variables
-var vnetResourceName = !empty(vnetName) ? vnetName : '${namingPrefix}-vnet'
-var vnetResourceGroupName = !empty(vnetResourceGroup) ? vnetResourceGroup : resourceGroup().name
-var appServiceSubnetName = '${namingPrefix}-private-subnet'
-var privateEndpointSubnetName = '${namingPrefix}-pe-subnet'
-var managementSubnetName = '${namingPrefix}-mgmt-subnet'
 
 // Security and Compliance Tags for Capital Management
 var commonTags = {
@@ -96,7 +56,7 @@ var commonTags = {
   SecurityLevel: 'Financial-Grade'
   ComplianceLevel: 'SOX-PCI-Ready'
   NamingPrefix: namingPrefix
-  VNetIntegration: enableServiceEndpoints ? 'ServiceEndpoints' : 'PrivateEndpointsOnly'
+  NetworkAccess: 'PrivateEndpointsOnly'
 }
 
 // Container configuration for GPS reporting
@@ -135,32 +95,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     defaultToOAuthAuthentication: true
     allowCrossTenantReplication: false
     
-    // Network access control - Configure based on service endpoints setting
-    networkAcls: enableServiceEndpoints ? {
-      defaultAction: 'Deny'
-      bypass: 'AzureServices' // Allow Azure services (App Services, etc.)
-      virtualNetworkRules: [
-        {
-          id: existingAppServiceSubnet.id
-          action: 'Allow'
-          state: 'Succeeded'
-        }
-        {
-          id: existingPrivateEndpointSubnet.id
-          action: 'Allow'
-          state: 'Succeeded'
-        }
-        {
-          id: existingManagementSubnet.id
-          action: 'Allow'
-          state: 'Succeeded'
-        }
-      ]
-      ipRules: [] // No IP-based access allowed
-    } : {
+    // CRITICAL: NETWORK ACCESS - PRIVATE ENDPOINTS ONLY
+    networkAcls: {
       defaultAction: 'Deny'
       bypass: 'None' // No exceptions - private endpoints only
-      virtualNetworkRules: [] // Will be configured via private endpoints
+      virtualNetworkRules: [] // No service endpoints
       ipRules: [] // No IP-based access allowed
     }
     
@@ -355,8 +294,8 @@ output securitySummary object = {
   internetAccess: 'COMPLETELY DISABLED'
   authenticationMethod: 'Azure AD Only'
   encryptionLevel: 'Double Encryption'
-  networkAccess: enableServiceEndpoints ? 'VNet Service Endpoints + Private Endpoints Ready' : 'Private Endpoints Only'
-  vnetIntegration: enableServiceEndpoints ? 'ENABLED' : 'PRIVATE ENDPOINTS REQUIRED'
+  networkAccess: 'Private Endpoints Only'
+  serviceEndpoints: 'DISABLED'
   publicBlobAccess: 'DISABLED'
   sharedKeyAccess: 'DISABLED'
   minimumTlsVersion: 'TLS 1.2'
@@ -365,8 +304,7 @@ output securitySummary object = {
   versioningEnabled: true
   changeFeedEnabled: true
   complianceLevel: 'Financial-Grade'
-  vnetName: vnetResourceName
-  subnetsWithAccess: enableServiceEndpoints ? [appServiceSubnetName, privateEndpointSubnetName, managementSubnetName] : []
+  accessMethod: 'Private Endpoints Required'
 }
 
 @description('Private Endpoint Requirements for IT Team')
@@ -405,6 +343,19 @@ output environment string = environment
 
 @description('Resource Group Name')
 output resourceGroupName string = resourceGroup().name
+
+@description('Private Endpoint Configuration')
+output privateEndpointConfig object = {
+  storageAccountName: storageAccountName
+  storageAccountId: storageAccount.id
+  accessMethod: 'Private Endpoints Only'
+  serviceEndpoints: 'Not Used'
+  networkAccess: 'Completely Blocked Until Private Endpoints'
+  recommendedSubnetName: '${namingPrefix}-pe-subnet'
+  recommendedVNetName: '${namingPrefix}-vnet'
+  status: 'Ready for IT Team Configuration'
+}
+
 @description('Storage Account Key Vault Secret Names (for IT Team)')
 output keyVaultSecrets array = [
   {

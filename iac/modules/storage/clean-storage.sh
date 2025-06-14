@@ -2,6 +2,7 @@
 
 # ==============================================================================
 # BLUE OWL GPS REPORTING - STORAGE MODULE CLEANUP
+# Clean up Storage resources (PRESERVES Resource Group and other infrastructure)
 # ==============================================================================
 
 set -e
