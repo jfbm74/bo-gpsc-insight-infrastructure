@@ -186,6 +186,7 @@ echo "  • SOX/PCI compliance ready"
 echo "  • Double encryption enabled"
 echo "  • Audit trail enabled"
 echo "  • Immutable storage for reports"
+echo "  • Versioning and change feed enabled"
 echo ""
 
 echo "🔒 Private Endpoints Only Mode:"

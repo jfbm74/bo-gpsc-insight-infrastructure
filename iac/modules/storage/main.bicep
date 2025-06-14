@@ -166,12 +166,6 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
       retentionInDays: dataRetentionDays
     }
     
-    // Point-in-time restore for financial data protection
-    restorePolicy: enableAdvancedSecurity ? {
-      enabled: true
-      days: min(dataRetentionDays, 7) // Max 7 days for point-in-time restore
-    } : null
-    
     // Last access time tracking for compliance
     lastAccessTimeTrackingPolicy: {
       enable: true
@@ -317,22 +311,22 @@ output privateEndpointRequirements array = [
       {
         subResourceType: 'blob'
         purpose: 'Blob storage access'
-        dnsZone: 'privatelink.blob.${environment().suffixes.storage}'
+        dnsZone: 'privatelink.blob.${az.environment().suffixes.storage}'
       }
       {
         subResourceType: 'file'
         purpose: 'File share access'
-        dnsZone: 'privatelink.file.${environment().suffixes.storage}'
+        dnsZone: 'privatelink.file.${az.environment().suffixes.storage}'
       }
       {
         subResourceType: 'table'
         purpose: 'Table storage access'
-        dnsZone: 'privatelink.table.${environment().suffixes.storage}'
+        dnsZone: 'privatelink.table.${az.environment().suffixes.storage}'
       }
       {
         subResourceType: 'queue'
         purpose: 'Queue storage access'
-        dnsZone: 'privatelink.queue.${environment().suffixes.storage}'
+        dnsZone: 'privatelink.queue.${az.environment().suffixes.storage}'
       }
     ]
   }
