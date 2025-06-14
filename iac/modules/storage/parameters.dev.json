@@ -22,6 +22,15 @@
     },
     "dataRetentionDays": {
       "value": 30
+    },
+    "vnetName": {
+      "value": ""
+    },
+    "vnetResourceGroup": {
+      "value": ""
+    },
+    "enableServiceEndpoints": {
+      "value": true
     }
   }
 }

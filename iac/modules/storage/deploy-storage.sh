@@ -165,6 +165,7 @@ cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    🦉 BLUE OWL GPS REPORTING                                 ║
 ║                    Storage Module Deployment                                 ║
+║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 EOF
 echo -e "${NC}"
@@ -174,6 +175,7 @@ print_header "STORAGE MODULE DEPLOYMENT CONFIGURATION"
 # Display deployment information
 echo "🔒 Financial-Grade Security Features:"
 echo "  • Complete internet isolation"
+echo "  • VNet integration with service endpoints"
 echo "  • Private endpoints ready (configured by IT)"
 echo "  • Azure AD authentication only"
 echo "  • Data exfiltration prevention"
@@ -181,6 +183,13 @@ echo "  • SOX/PCI compliance ready"
 echo "  • Double encryption enabled"
 echo "  • Audit trail enabled"
 echo "  • Immutable storage for reports"
+echo ""
+
+echo "🌐 VNet Integration:"
+echo "  • Connected to VNet:  $VNET_NAME"
+echo "  • Service Endpoints:  Enabled (immediate access)"
+echo "  • Private Endpoints:  Ready for IT configuration"
+echo "  • App Service Access: Immediate via service endpoints"
 echo ""
 
 echo "📋 Deployment Configuration:"
@@ -224,6 +233,30 @@ if ! az group show --name "$RESOURCE_GROUP_NAME" &> /dev/null; then
 fi
 print_success "Resource group exists: $RESOURCE_GROUP_NAME"
 
+# Check for VNet dependency
+print_status "Checking VNet dependency..."
+VNET_NAME="${NAMING_PREFIX}-vnet"
+if ! az network vnet show --name "$VNET_NAME" --resource-group "$RESOURCE_GROUP_NAME" &> /dev/null; then
+    print_warning "VNet not found: $VNET_NAME"
+    print_info "Storage requires VNet for service endpoints/private endpoints"
+    print_info "Please deploy the VNet module first:"
+    print_info "  cd iac/modules/network/vnet"
+    print_info "  ./deploy-vnet.sh -e $ENVIRONMENT -g $RESOURCE_GROUP_NAME"
+    exit 1
+fi
+print_success "VNet found: $VNET_NAME"
+
+# Check required subnets
+REQUIRED_SUBNETS=("${NAMING_PREFIX}-private-subnet" "${NAMING_PREFIX}-pe-subnet" "${NAMING_PREFIX}-mgmt-subnet")
+for subnet in "${REQUIRED_SUBNETS[@]}"; do
+    if ! az network vnet subnet show --vnet-name "$VNET_NAME" --name "$subnet" --resource-group "$RESOURCE_GROUP_NAME" &> /dev/null; then
+        print_warning "Required subnet not found: $subnet"
+        print_info "Please ensure VNet module is properly deployed"
+        exit 1
+    fi
+done
+print_success "All required subnets found"
+
 # Check for existing Storage Account
 EXISTING_STORAGE_NAME=$(echo ${NAMING_PREFIX}storage | tr -d '-')
 if az storage account show --name "$EXISTING_STORAGE_NAME" --resource-group "$RESOURCE_GROUP_NAME" &> /dev/null; then
@@ -244,8 +277,9 @@ if [[ "$SKIP_CONFIRMATION" != true && "$DRY_RUN" != true ]]; then
     print_warning "⚠️  FINANCIAL DATA STORAGE DEPLOYMENT"
     print_info "This will deploy Storage with MAXIMUM SECURITY for capital management"
     print_info "• NO internet access - completely private"
+    print_info "• VNet integration with service endpoints (immediate access)"
     print_info "• Financial-grade compliance (SOX/PCI ready)"
-    print_info "• Private endpoints required for access"
+    print_info "• Private endpoints ready for IT configuration"
     print_info "• Azure AD authentication only"
     print_info "• Immutable storage for audit trail"
     echo ""
@@ -349,21 +383,22 @@ else
         fi
         
         print_header "NEXT STEPS"
-        echo "1. ✅ Storage deployed successfully (no internet access)"
-        echo "2. 📧 Contact IT team to configure private endpoints:"
+        echo "1. ✅ Storage deployed successfully with VNet integration"
+        echo "2. 🔗 Storage accessible from VNet immediately via service endpoints"
+        echo "3. 📧 Contact IT team to configure private endpoints for enhanced security:"
         echo "   • Request private endpoint for: $STORAGE_NAME"
         echo "   • Sub-resources needed: blob, file, table, queue"
         echo "   • DNS zones: privatelink.blob.core.windows.net, etc."
         echo "   • Use subnet: ${NAMING_PREFIX}-pe-subnet"
         echo ""
-        echo "3. 🔍 Verify deployment:"
+        echo "4. 🔍 Verify deployment:"
         echo "   az storage account show --name $STORAGE_NAME -g $RESOURCE_GROUP_NAME"
         echo ""
-        echo "4. 📊 Check container creation:"
+        echo "5. 📊 Test VNet access from App Services:"
         echo "   az storage container list --account-name $STORAGE_NAME --auth-mode login"
         echo ""
-        echo "5. 🚀 Ready for other modules:"
-        echo "   Storage is now available for App Services and other components"
+        echo "6. 🚀 App Services can now access storage via managed identity"
+        echo "   Storage connection will work immediately through service endpoints"
         
     else
         print_error "❌ Storage deployment failed!"
@@ -376,9 +411,10 @@ fi
 print_header "STORAGE MODULE DEPLOYMENT COMPLETED! 🚀"
 
 if [[ "$DRY_RUN" != true ]]; then
-    print_success "Your Storage infrastructure is deployed with maximum security!"
+    print_success "Your Storage infrastructure is deployed with maximum security and VNet integration!"
     print_info "Environment: $ENVIRONMENT"
     print_info "Resource Group: $RESOURCE_GROUP_NAME"
+    print_info "VNet Integration: Service Endpoints Enabled"
     print_info "Security Level: Financial-Grade (No Internet Access)"
-    print_info "Next: Request private endpoints from IT team"
+    print_info "Access: Immediate via VNet, Enhanced via Private Endpoints"
 fi
