@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "East US"
+    },
+    "baseName": {
+      "value": "bo-gpsc-reports"
+    },
+    "sqlAdminUsername": {
+      "value": "sqladmin"
+    },
+    "sqlAdminPassword": {
+      "value": "REPLACE_WITH_SECURE_PASSWORD"
+    },
+    "enableSqlAzureAdAuth": {
+      "value": true
+    },
+    "sqlAzureAdAdminObjectId": {
+      "value": ""
+    },
+    "sqlAzureAdAdminName": {
+      "value": ""
+    },
+    "sqlDatabaseEdition": {
+      "value": "Standard"
+    },
+    "sqlDatabaseServiceObjective": {
+      "value": "S1"
+    },
+    "sqlDatabaseMaxSizeGB": {
+      "value": 10
+    },
+    "enableAdvancedSecurity": {
+      "value": true
+    }
+  }
+}
