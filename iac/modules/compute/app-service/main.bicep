@@ -1,5 +1,6 @@
 // ==============================================================================
 // BLUE OWL GPS REPORTING - APP SERVICE MODULE
+// Deploy App Services with VNet Integration (No Internet Access)
 // ==============================================================================
 
 targetScope = 'resourceGroup'
@@ -28,14 +29,11 @@ param appServiceSkuName string = 'B1'
 @allowed(['Basic', 'Standard', 'Premium', 'PremiumV2'])
 param appServiceSkuTier string = 'Basic'
 
-@description('VNet Name for integration')
+@description('VNet Name for integration (must exist)')
 param vnetName string = ''
 
 @description('Subnet name for App Service VNet integration')
 param appServiceSubnetName string = ''
-
-// @description('Enable Azure AD authentication for SQL Server')
-// param enableSqlAzureAdAuth bool = true
 
 // ==============================================================================
 // VARIABLES
@@ -50,7 +48,7 @@ var sqlDatabaseName = '${namingPrefix}-database'
 var storageAccountName = replace('${baseName}${environment}storage', '-', '')
 var appInsightsName = '${namingPrefix}-insights'
 
-// Network resource names
+// Network resource names - consistent with VNet module
 var vnetResourceName = !empty(vnetName) ? vnetName : '${namingPrefix}-vnet'
 var subnetResourceName = !empty(appServiceSubnetName) ? appServiceSubnetName : '${namingPrefix}-private-subnet'
 
@@ -61,10 +59,11 @@ var commonTags = {
   ManagedBy: 'Bicep-IaC'
   CreatedDate: timestamp
   Module: 'AppService'
+  SecurityLevel: 'Private-Only'
 }
 
 // ==============================================================================
-// EXISTING RESOURCESNFHz
+// EXISTING RESOURCES (DEPENDENCIES)
 // ==============================================================================
 
 // Reference existing VNet (must be created first)
@@ -329,6 +328,7 @@ resource backendVnetIntegration 'Microsoft.Web/sites/networkConfig@2023-01-01' =
   }
 }
 
+
 // ==============================================================================
 // OUTPUTS
 // ==============================================================================
@@ -362,5 +362,4 @@ output backendDefaultHostname string = backendApp.properties.defaultHostName
 
 @description('Backend App Managed Identity Principal ID')
 output backendPrincipalId string = backendApp.identity.principalId
-
 
