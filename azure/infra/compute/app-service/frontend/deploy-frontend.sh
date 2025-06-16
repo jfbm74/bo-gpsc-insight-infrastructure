@@ -278,6 +278,7 @@ if [[ "$DRY_RUN" == true ]]; then
     print_header "DRY RUN - TEMPLATE VALIDATION ONLY"
     
     print_status "Validating Bicep template..."
+    # FIXED: Always use existing ASP for frontend and pass the correct ASP name
     az deployment group validate \
         --resource-group "$RESOURCE_GROUP_NAME" \
         --template-file main-frontend.bicep \
@@ -300,7 +301,7 @@ else
     print_status "Starting Frontend deployment..."
     print_status "Deployment name: $DEPLOYMENT_NAME"
     
-    # Deploy the infrastructure
+    # Deploy the infrastructure - FIXED: Always use existing ASP for frontend
     az deployment group create \
         --resource-group "$RESOURCE_GROUP_NAME" \
         --template-file main-frontend.bicep \

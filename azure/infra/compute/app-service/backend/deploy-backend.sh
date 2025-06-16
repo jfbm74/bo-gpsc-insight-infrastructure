@@ -23,7 +23,7 @@ SUBSCRIPTION_ID=""
 LOCATION="East US"
 SKIP_CONFIRMATION=false
 DRY_RUN=false
-DEPLOY_ASP=true
+DEPLOY_ASP=true  # Default: create new App Service Plan
 
 # Function to print colored output
 print_header() {
@@ -247,7 +247,7 @@ if [[ "$DEPLOY_ASP" == false ]]; then
     print_status "Checking existing App Service Plan..."
     if ! az appservice plan show --name "$ASP_NAME" --resource-group "$RESOURCE_GROUP_NAME" &> /dev/null; then
         print_error "App Service Plan not found: $ASP_NAME"
-        print_info "Please deploy the App Service Plan first or use -n flag to create it"
+        print_info "Please deploy the App Service Plan first or remove the -n flag to create it"
         exit 1
     fi
     print_success "Existing App Service Plan found: $ASP_NAME"
@@ -272,24 +272,28 @@ fi
 # Generate deployment name
 DEPLOYMENT_NAME="backend-${ENVIRONMENT}-$(date +%Y%m%d-%H%M%S)"
 
-# Set App Service Plan parameter based on flag
-if [[ "$DEPLOY_ASP" == true ]]; then
-    ASP_PARAM="deployAppServicePlan=true"
-    ASP_NAME_PARAM="existingAppServicePlanName=''"
-else
-    ASP_PARAM="deployAppServicePlan=false"
-    ASP_NAME_PARAM="existingAppServicePlanName='$ASP_NAME'"
-fi
-
+# FIXED: Set parameters correctly based on flag
 if [[ "$DRY_RUN" == true ]]; then
     print_header "DRY RUN - TEMPLATE VALIDATION ONLY"
     
     print_status "Validating Bicep template..."
-    az deployment group validate \
-        --resource-group "$RESOURCE_GROUP_NAME" \
-        --template-file main-backend.bicep \
-        --parameters "@$PARAMETERS_FILE" \
-        --parameters environment="$ENVIRONMENT" location="$LOCATION" $ASP_PARAM $ASP_NAME_PARAM
+    if [[ "$DEPLOY_ASP" == true ]]; then
+        # Deploy new ASP
+        az deployment group validate \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --template-file main-backend.bicep \
+            --parameters "@$PARAMETERS_FILE" \
+            --parameters environment="$ENVIRONMENT" location="$LOCATION" \
+            --parameters deployAppServicePlan=true
+    else
+        # Use existing ASP
+        az deployment group validate \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --template-file main-backend.bicep \
+            --parameters "@$PARAMETERS_FILE" \
+            --parameters environment="$ENVIRONMENT" location="$LOCATION" \
+            --parameters deployAppServicePlan=false existingAppServicePlanName="$ASP_NAME"
+    fi
     
     if [[ $? -eq 0 ]]; then
         print_success "✅ Template validation passed!"
@@ -307,13 +311,27 @@ else
     print_status "Deployment name: $DEPLOYMENT_NAME"
     
     # Deploy the infrastructure
-    az deployment group create \
-        --resource-group "$RESOURCE_GROUP_NAME" \
-        --template-file main-backend.bicep \
-        --parameters "@$PARAMETERS_FILE" \
-        --parameters environment="$ENVIRONMENT" location="$LOCATION" $ASP_PARAM $ASP_NAME_PARAM \
-        --name "$DEPLOYMENT_NAME" \
-        --verbose
+    if [[ "$DEPLOY_ASP" == true ]]; then
+        # Deploy new ASP
+        az deployment group create \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --template-file main-backend.bicep \
+            --parameters "@$PARAMETERS_FILE" \
+            --parameters environment="$ENVIRONMENT" location="$LOCATION" \
+            --parameters deployAppServicePlan=true \
+            --name "$DEPLOYMENT_NAME" \
+            --verbose
+    else
+        # Use existing ASP
+        az deployment group create \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --template-file main-backend.bicep \
+            --parameters "@$PARAMETERS_FILE" \
+            --parameters environment="$ENVIRONMENT" location="$LOCATION" \
+            --parameters deployAppServicePlan=false existingAppServicePlanName="$ASP_NAME" \
+            --name "$DEPLOYMENT_NAME" \
+            --verbose
+    fi
     
     if [[ $? -eq 0 ]]; then
         print_success "🎉 Backend deployment completed successfully!"

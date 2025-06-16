@@ -36,17 +36,17 @@ param vnetName string = ''
 param appServiceSubnetName string = ''
 
 @description('Deploy App Service Plan (set to false if already exists)')
-param deployAppServicePlan bool = false
+param deployAppServicePlan bool = true  // FIXED: Changed default to true
 
 @description('Existing App Service Plan name (if not deploying new one)')
-param existingAppServicePlanName string = 'bo-gpsc-reports-dev-asp'
+param existingAppServicePlanName string = ''  // FIXED: Empty by default
 
 // ==============================================================================
 // VARIABLES
 // ==============================================================================
 
 var namingPrefix = '${baseName}-${environment}'
-var appServicePlanName = !empty(existingAppServicePlanName) ? existingAppServicePlanName : '${namingPrefix}-asp'
+var appServicePlanName = '${namingPrefix}-asp'  // FIXED: Use calculated name always
 var backendAppName = '${namingPrefix}-backend'
 var sqlServerName = '${namingPrefix}-sqlserver'
 var sqlDatabaseName = '${namingPrefix}-database'
@@ -56,6 +56,9 @@ var appInsightsName = '${namingPrefix}-insights'
 // Network resource names - consistent with VNet module
 var vnetResourceName = !empty(vnetName) ? vnetName : '${namingPrefix}-vnet'
 var subnetResourceName = !empty(appServiceSubnetName) ? appServiceSubnetName : '${namingPrefix}-private-subnet'
+
+// FIXED: Calculate the actual ASP name to use
+var actualAppServicePlanName = deployAppServicePlan ? appServicePlanName : existingAppServicePlanName
 
 // Security and Compliance Tags
 var commonTags = {
@@ -87,13 +90,13 @@ resource existingAppInsights 'Microsoft.Insights/components@2020-02-02' existing
   name: appInsightsName
 }
 
-// Reference existing App Service Plan if not deploying new one
+// FIXED: Only reference existing ASP if we're not deploying new one AND name is provided
 resource existingAppServicePlan 'Microsoft.Web/serverfarms@2023-01-01' existing = if (!deployAppServicePlan && !empty(existingAppServicePlanName)) {
   name: existingAppServicePlanName
 }
 
 // ==============================================================================
-// APP SERVICE PLAN (OPTIONAL)
+// APP SERVICE PLAN (CONDITIONAL)
 // ==============================================================================
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = if (deployAppServicePlan) {
@@ -130,6 +133,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
     type: 'SystemAssigned'
   }
   properties: {
+    // FIXED: Conditional reference to ASP
     serverFarmId: deployAppServicePlan ? appServicePlan.id : existingAppServicePlan.id
     httpsOnly: true
     clientAffinityEnabled: false
@@ -140,6 +144,9 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
+      
+      // CRITICAL: FastAPI startup command
+      appCommandLine: 'uvicorn main:app --host 0.0.0.0 --port 8000'
       
       // CRITICAL: Block ALL internet access
       scmIpSecurityRestrictions: [
@@ -209,7 +216,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
           name: 'WEBSITE_DNS_SERVER'
           value: '168.63.129.16' // Azure-provided DNS
         }
-        // Python specific settings
+        // Python/FastAPI specific settings
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
           value: 'true'
@@ -225,6 +232,19 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         {
           name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
           value: 'false'
+        }
+        // FastAPI specific environment variables
+        {
+          name: 'UVICORN_PORT'
+          value: '8000'
+        }
+        {
+          name: 'UVICORN_HOST'
+          value: '0.0.0.0'
+        }
+        {
+          name: 'FASTAPI_ENV'
+          value: environment
         }
       ]
     }
@@ -250,7 +270,7 @@ resource backendVnetIntegration 'Microsoft.Web/sites/networkConfig@2023-01-01' =
 // ==============================================================================
 
 @description('App Service Plan Name')
-output appServicePlanName string = deployAppServicePlan ? appServicePlan.name : existingAppServicePlanName
+output appServicePlanName string = actualAppServicePlanName
 
 @description('App Service Plan Resource ID')
 output appServicePlanId string = deployAppServicePlan ? appServicePlan.id : existingAppServicePlan.id
@@ -276,4 +296,8 @@ output deploymentSummary object = {
   vnetIntegration: true
   privateEndpointsRequired: true
   authenticationMethod: 'Azure AD Managed Identity'
+  appServicePlanName: actualAppServicePlanName
+  deployedNewASP: deployAppServicePlan
+  startupCommand: 'uvicorn main:app --host 0.0.0.0 --port 8000'
+  framework: 'FastAPI'
 }

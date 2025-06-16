@@ -36,9 +36,9 @@ param vnetName string = ''
 param appServiceSubnetName string = ''
 
 @description('Deploy App Service Plan (set to false if already exists)')
-param deployAppServicePlan bool = false
+param deployAppServicePlan bool = false  // Frontend typically uses existing ASP
 
-@description('Existing App Service Plan name (if not deploying new one)')
+@description('Existing App Service Plan name (required when deployAppServicePlan=false)')
 param existingAppServicePlanName string = ''
 
 // ==============================================================================
@@ -46,7 +46,7 @@ param existingAppServicePlanName string = ''
 // ==============================================================================
 
 var namingPrefix = '${baseName}-${environment}'
-var appServicePlanName = !empty(existingAppServicePlanName) ? existingAppServicePlanName : '${namingPrefix}-asp'
+var appServicePlanName = '${namingPrefix}-asp'
 var frontendAppName = '${namingPrefix}-frontend'
 var backendAppName = '${namingPrefix}-backend'
 var appInsightsName = '${namingPrefix}-insights'
@@ -54,6 +54,9 @@ var appInsightsName = '${namingPrefix}-insights'
 // Network resource names - consistent with VNet module
 var vnetResourceName = !empty(vnetName) ? vnetName : '${namingPrefix}-vnet'
 var subnetResourceName = !empty(appServiceSubnetName) ? appServiceSubnetName : '${namingPrefix}-private-subnet'
+
+// FIXED: Calculate the actual ASP name to use
+var actualAppServicePlanName = deployAppServicePlan ? appServicePlanName : existingAppServicePlanName
 
 // Security and Compliance Tags
 var commonTags = {
@@ -85,7 +88,7 @@ resource existingAppInsights 'Microsoft.Insights/components@2020-02-02' existing
   name: appInsightsName
 }
 
-// Reference existing App Service Plan if not deploying new one
+// FIXED: Only reference existing ASP if we're not deploying new one AND name is provided
 resource existingAppServicePlan 'Microsoft.Web/serverfarms@2023-01-01' existing = if (!deployAppServicePlan && !empty(existingAppServicePlanName)) {
   name: existingAppServicePlanName
 }
@@ -128,6 +131,7 @@ resource frontendApp 'Microsoft.Web/sites@2023-01-01' = {
     type: 'SystemAssigned'
   }
   properties: {
+    // FIXED: Conditional reference to ASP with validation
     serverFarmId: deployAppServicePlan ? appServicePlan.id : existingAppServicePlan.id
     httpsOnly: true
     clientAffinityEnabled: false
@@ -227,7 +231,7 @@ resource frontendVnetIntegration 'Microsoft.Web/sites/networkConfig@2023-01-01' 
 // ==============================================================================
 
 @description('App Service Plan Name')
-output appServicePlanName string = deployAppServicePlan ? appServicePlan.name : existingAppServicePlanName
+output appServicePlanName string = actualAppServicePlanName
 
 @description('App Service Plan Resource ID')
 output appServicePlanId string = deployAppServicePlan ? appServicePlan.id : existingAppServicePlan.id
@@ -254,4 +258,6 @@ output deploymentSummary object = {
   vnetIntegration: true
   privateEndpointsRequired: true
   backendUrl: 'https://${backendAppName}.azurewebsites.net'
+  appServicePlanName: actualAppServicePlanName
+  deployedNewASP: deployAppServicePlan
 }
