@@ -24,7 +24,7 @@
             "value": true
         },
         "enabledForDeployment": {
-            "value": true
+            "value": false
         },
         "enabledForTemplateDeployment": {
             "value": true
@@ -39,13 +39,13 @@
             "value": 7
         },
         "enablePurgeProtection": {
-            "value": false
+            "value": true
         },
         "networkAclsDefaultAction": {
             "value": "Deny"
         },
         "networkAclsBypass": {
-            "value": "None"
+            "value": "AzureServices"
         },
         "allowedIpAddresses": {
             "value": []

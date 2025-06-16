@@ -206,28 +206,16 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
       {
         category: 'AuditEvent'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: diagnosticLogsRetentionDays
-        }
       }
       {
         category: 'AzurePolicyEvaluationDetails'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: diagnosticLogsRetentionDays
-        }
       }
     ]
     metrics: [
       {
         category: 'AllMetrics'
         enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: diagnosticLogsRetentionDays
-        }
       }
     ]
   }
