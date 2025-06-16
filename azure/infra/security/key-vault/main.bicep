@@ -1,5 +1,5 @@
 // ==============================================================================
-// BLUE OWL GPS REPORTING - KEY VAULT MODULE
+// KEY VAULT - ENVIRONMENT AGNOSTIC TEMPLATE
 // ==============================================================================
 
 targetScope = 'resourceGroup'
@@ -8,34 +8,87 @@ targetScope = 'resourceGroup'
 // PARAMETERS
 // ==============================================================================
 
-@description('Environment name (dev, uat, prod)')
-param environment string = 'dev'
+@description('Environment name (dev, uat, prod, etc.)')
+param environment string
 
 @description('Location for all resources')
 param location string = resourceGroup().location
 
 @description('Base name for all resources')
-param baseName string = 'bo-gpsc-reports'
-
-@description('Current timestamp for unique naming')
-param timestamp string = utcNow()
+param baseName string
 
 @description('Azure AD Tenant ID')
 param tenantId string = subscription().tenantId
 
-@description('Enable HSM protection for premium security')
+@description('Key Vault SKU name')
+@allowed(['standard', 'premium'])
+param skuName string = 'standard'
+
+@description('Enable HSM protection (requires premium SKU)')
 param enableHsmProtection bool = false
+
+@description('Enable RBAC authorization')
+param enableRbacAuthorization bool = true
+
+@description('Enable access from Azure Virtual Machines for deployment')
+param enabledForDeployment bool = false
+
+@description('Enable access from Azure Resource Manager for template deployment')
+param enabledForTemplateDeployment bool = false
+
+@description('Enable access for Azure Disk Encryption')
+param enabledForDiskEncryption bool = false
+
+@description('Enable soft delete')
+param enableSoftDelete bool = true
 
 @description('Soft delete retention days')
 @minValue(7)
 @maxValue(90)
 param softDeleteRetentionDays int = 90
 
-@description('Enable purge protection (cannot be disabled once enabled)')
+@description('Enable purge protection')
 param enablePurgeProtection bool = true
 
-@description('Enable advanced auditing')
-param enableAdvancedAuditing bool = true
+@description('Network ACLs default action')
+@allowed(['Allow', 'Deny'])
+param networkAclsDefaultAction string = 'Deny'
+
+@description('Network ACLs bypass')
+@allowed(['None', 'AzureServices'])
+param networkAclsBypass string = 'None'
+
+@description('Allowed IP addresses for access')
+param allowedIpAddresses array = []
+
+@description('Enable diagnostic settings')
+param enableDiagnostics bool = true
+
+@description('Log Analytics workspace retention days')
+@minValue(30)
+@maxValue(730)
+param logAnalyticsRetentionDays int = 90
+
+@description('Diagnostic logs retention days')
+@minValue(7)
+@maxValue(365)
+param diagnosticLogsRetentionDays int = 90
+
+@description('Custom tags for resources')
+param customTags object = {}
+
+@description('Log Analytics workspace SKU')
+@allowed(['PerGB2018', 'Free', 'Standalone', 'PerNode', 'Standard', 'Premium'])
+param logAnalyticsWorkspaceSku string = 'PerGB2018'
+
+@description('Enable Log Analytics workspace')
+param enableLogAnalyticsWorkspace bool = true
+
+@description('Existing Log Analytics workspace name')
+param existingLogAnalyticsWorkspaceName string = ''
+
+@description('Current timestamp for resource tagging')
+param timestamp string = utcNow()
 
 // ==============================================================================
 // VARIABLES
@@ -43,25 +96,63 @@ param enableAdvancedAuditing bool = true
 
 var namingPrefix = '${baseName}-${environment}'
 var keyVaultName = '${namingPrefix}-kv'
+var logAnalyticsWorkspaceName = '${namingPrefix}-logs'
 
-// Security and Compliance Tags for Capital Management
-var commonTags = {
+// Merge custom tags with standard tags
+var standardTags = {
   Environment: environment
-  Project: 'BO-GPSC-Reports'
+  Project: baseName
   ManagedBy: 'Bicep-IaC'
   CreatedDate: timestamp
   Module: 'KeyVault'
-  SecurityLevel: 'Financial-Grade'
-  ComplianceLevel: 'SOX-PCI-Ready'
-  NetworkAccess: 'PrivateEndpointsOnly'
-  DataClassification: 'Highly-Confidential'
-  DataResidency: location // Using location as data residency region
 }
 
-// Key Vault SKU based on environment and security requirements
+var allTags = union(standardTags, customTags)
+
+// Network ACLs configuration
+var ipRules = empty(allowedIpAddresses) ? [] : map(allowedIpAddresses, ip => {
+  value: ip
+})
+
+var networkAcls = {
+  defaultAction: networkAclsDefaultAction
+  bypass: networkAclsBypass
+  ipRules: ipRules
+  virtualNetworkRules: []
+}
+
+// Key Vault SKU configuration
 var keyVaultSku = {
-  name: enableHsmProtection ? 'premium' : 'standard'
+  name: enableHsmProtection ? 'premium' : skuName
   family: 'A'
+}
+
+// Determine if we should use existing Log Analytics workspace
+var useExistingLogAnalytics = existingLogAnalyticsWorkspaceName != ''
+var actualLogAnalyticsWorkspaceName = useExistingLogAnalytics ? existingLogAnalyticsWorkspaceName : logAnalyticsWorkspaceName
+
+// ==============================================================================
+// LOG ANALYTICS WORKSPACE
+// ==============================================================================
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = if (enableLogAnalyticsWorkspace && !useExistingLogAnalytics) {
+  name: logAnalyticsWorkspaceName
+  location: location
+  tags: allTags
+  properties: {
+    sku: {
+      name: logAnalyticsWorkspaceSku
+    }
+    retentionInDays: logAnalyticsRetentionDays
+    features: {
+      enableLogAccessUsingOnlyResourcePermissions: true
+    }
+  }
+}
+
+// Reference existing Log Analytics workspace if specified
+resource existingLogAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = if (useExistingLogAnalytics && enableDiagnostics) {
+  name: existingLogAnalyticsWorkspaceName
 }
 
 // ==============================================================================
@@ -71,65 +162,53 @@ var keyVaultSku = {
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
-  tags: commonTags
+  tags: allTags
   properties: {
     tenantId: tenantId
+    
+    // SKU Configuration
     sku: keyVaultSku
     
-    // CRITICAL: NO INTERNET ACCESS - COMPLETELY PRIVATE
+    // NO PUBLIC ACCESS - ALWAYS DISABLED FOR SECURITY
     publicNetworkAccess: 'Disabled'
     
-    // Access Policies - Start with empty (will use RBAC)
+    // Authorization method
+    enableRbacAuthorization: enableRbacAuthorization
     accessPolicies: []
     
-    // Enable RBAC authorization (recommended over access policies)
-    enableRbacAuthorization: true
+    // Resource access permissions
+    enabledForDeployment: enabledForDeployment
+    enabledForTemplateDeployment: enabledForTemplateDeployment
+    enabledForDiskEncryption: enabledForDiskEncryption
     
-    // Soft delete and purge protection for compliance
-    enableSoftDelete: true
+    // Soft delete and purge protection
+    enableSoftDelete: enableSoftDelete
     softDeleteRetentionInDays: softDeleteRetentionDays
     enablePurgeProtection: enablePurgeProtection
     
-    // Network ACLs - DENY ALL
-    networkAcls: {
-      defaultAction: 'Deny'
-      bypass: 'None' // No Azure services bypass
-      ipRules: [] // No IP-based access
-      virtualNetworkRules: [] // No service endpoints - private endpoints only
-    }
+    // Network access rules
+    networkAcls: networkAcls
     
-    // Advanced security features
-    enabledForDeployment: false // Not for VM deployment
-    enabledForDiskEncryption: false // Not for disk encryption
-    enabledForTemplateDeployment: false // Not for ARM template deployment
-    
-    // Audit and compliance
     createMode: 'default'
   }
 }
 
 // ==============================================================================
-// DIAGNOSTIC SETTINGS (if Application Insights exists)
+// DIAGNOSTIC SETTINGS
 // ==============================================================================
 
-// Reference existing Log Analytics workspace (if exists)
-resource existingLogAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = if (enableAdvancedAuditing) {
-  name: '${namingPrefix}-logs'
-}
-
-// Diagnostic settings for Key Vault
-resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (enableAdvancedAuditing) {
+resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (enableDiagnostics) {
   name: '${keyVaultName}-diagnostics'
   scope: keyVault
   properties: {
-    workspaceId: enableAdvancedAuditing ? existingLogAnalytics.id : null
+    workspaceId: enableDiagnostics ? (useExistingLogAnalytics ? existingLogAnalyticsWorkspace.id : logAnalyticsWorkspace.id) : null
     logs: [
       {
         category: 'AuditEvent'
         enabled: true
         retentionPolicy: {
           enabled: true
-          days: 90
+          days: diagnosticLogsRetentionDays
         }
       }
       {
@@ -137,7 +216,7 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
         enabled: true
         retentionPolicy: {
           enabled: true
-          days: 90
+          days: diagnosticLogsRetentionDays
         }
       }
     ]
@@ -147,22 +226,12 @@ resource keyVaultDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
         enabled: true
         retentionPolicy: {
           enabled: true
-          days: 90
+          days: diagnosticLogsRetentionDays
         }
       }
     ]
   }
 }
-
-// ==============================================================================
-// RBAC ROLE DEFINITIONS (for reference)
-// ==============================================================================
-
-// Built-in role definitions that will be assigned by App Service module:
-// - Key Vault Secrets User: 4633458b-17de-408a-b874-0445c86b69e6 (for reading secrets)
-// - Key Vault Secrets Officer: b86a8fe4-44ce-4948-aee5-eccb2c155cd7 (for managing secrets)
-// - Key Vault Crypto User: 12338af0-0e69-4776-bea7-57ae8d297424 (for crypto operations)
-// - Key Vault Administrator: 00482a5a-887f-4fb3-b363-3b7fe8e74483 (full control)
 
 // ==============================================================================
 // OUTPUTS
@@ -183,77 +252,55 @@ output keyVaultLocation string = keyVault.location
 @description('Key Vault SKU')
 output keyVaultSku string = keyVault.properties.sku.name
 
-@description('Security Configuration Summary')
-output securitySummary object = {
-  internetAccess: 'COMPLETELY DISABLED'
-  authenticationMethod: 'Azure AD RBAC'
-  networkAccess: 'Private Endpoints Only'
-  serviceEndpoints: 'DISABLED'
-  publicNetworkAccess: 'DISABLED'
-  firewallRules: 'NONE'
-  azureServicesBypass: 'DISABLED'
-  softDeleteEnabled: true
-  purgeProtectionEnabled: enablePurgeProtection
-  retentionDays: softDeleteRetentionDays
-  complianceLevel: 'Financial-Grade'
-  accessMethod: 'Private Endpoints Required'
-  rbacEnabled: true
-  accessPoliciesEnabled: false
-}
+@description('Log Analytics Workspace ID')
+output logAnalyticsWorkspaceId string = enableLogAnalyticsWorkspace ? (useExistingLogAnalytics ? existingLogAnalyticsWorkspace.id : logAnalyticsWorkspace.id) : ''
 
-@description('Private Endpoint Requirements for IT Team')
-output privateEndpointRequirements array = [
-  {
-    resourceType: 'Key Vault'
-    resourceName: keyVaultName
-    resourceId: keyVault.id
-    vaultUri: keyVault.properties.vaultUri
-    privateEndpointSubGroup: 'vault'
-    dnsZone: 'privatelink.vaultcore.azure.net'
-    recommendedSubnetName: '${namingPrefix}-pe-subnet'
-    recommendedVNetName: '${namingPrefix}-vnet'
-    requiredFor: 'Backend App Service to access secrets'
-  }
-]
+@description('Log Analytics Workspace Name')
+output logAnalyticsWorkspaceName string = enableLogAnalyticsWorkspace ? actualLogAnalyticsWorkspaceName : ''
 
-@description('RBAC Requirements for App Services')
-output rbacRequirements array = [
-  {
-    service: 'Backend App Service'
-    principalName: '${namingPrefix}-backend'
-    requiredRole: 'Key Vault Secrets User'
-    roleDefinitionId: '4633458b-17de-408a-b874-0445c86b69e6'
-    purpose: 'Read secrets for database connections, API keys, etc.'
-  }
-  {
-    service: 'Frontend App Service'
-    principalName: '${namingPrefix}-frontend'
-    requiredRole: 'Key Vault Secrets User'
-    roleDefinitionId: '4633458b-17de-408a-b874-0445c86b69e6'
-    purpose: 'Read secrets for API endpoints and configuration'
-  }
-]
-
-@description('Deployment Environment')
-output environment string = environment
-
-@description('Resource Group Name')
-output resourceGroupName string = resourceGroup().name
-
-@description('Key Vault Configuration for App Services')
-output appServiceConfiguration object = {
+@description('Environment Configuration Summary')
+output configurationSummary object = {
+  environment: environment
   keyVaultName: keyVaultName
-  keyVaultUri: keyVault.properties.vaultUri
-  authenticationMethod: 'Managed Identity with RBAC'
-  secretNamingConvention: {
-    databaseConnectionString: 'database-connection-string'
-    storageConnectionString: 'storage-connection-string'
-    applicationInsightsKey: 'app-insights-instrumentation-key'
-    apiKeys: 'api-key-{service-name}'
-    certificates: 'cert-{certificate-name}'
-  }
-  accessInstructions: 'Configure private endpoint first, then use @Microsoft.KeyVault(SecretUri=...) in App Service configuration'
+  publicNetworkAccess: false // ALWAYS DISABLED
+  rbacEnabled: enableRbacAuthorization
+  softDeleteEnabled: enableSoftDelete
+  purgeProtectionEnabled: enablePurgeProtection
+  diagnosticsEnabled: enableDiagnostics
+  skuName: keyVault.properties.sku.name
+  retentionDays: softDeleteRetentionDays
+  networkDefaultAction: networkAclsDefaultAction
+  networkBypass: networkAclsBypass
 }
 
-@description('Tenant ID for Key Vault')
-output tenantId string = tenantId
+@description('Private Endpoint Configuration - MANDATORY')
+output privateEndpointConfig object = {
+  required: true
+  resourceId: keyVault.id
+  subResource: 'vault'
+  dnsZone: 'privatelink.vaultcore.azure.net'
+  message: 'Private endpoint is MANDATORY - public network access is permanently disabled'
+}
+
+@description('RBAC Configuration')
+output rbacConfiguration object = {
+  enabled: enableRbacAuthorization
+  requiredRoles: [
+    {
+      role: 'Key Vault Secrets User'
+      roleDefinitionId: '4633458b-17de-408a-b874-0445c86b69e6'
+      purpose: 'Read secrets'
+    }
+    {
+      role: 'Key Vault Secrets Officer'
+      roleDefinitionId: 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
+      purpose: 'Manage secrets'
+    }
+    {
+      role: 'Key Vault Administrator'
+      roleDefinitionId: '00482a5a-887f-4fb3-b363-3b7fe8e74483'
+      purpose: 'Full administrative access'
+    }
+  ]
+}
+

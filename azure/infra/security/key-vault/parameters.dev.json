@@ -1,33 +1,84 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "environment": {
-      "value": "dev"
-    },
-    "location": {
-      "value": "East US"
-    },
-    "baseName": {
-      "value": "bo-gpsc-reports"
-    },
-    "tenantId": {
-      "value": "[subscription().tenantId]"
-    },
-    "enableHsmProtection": {
-      "value": false
-    },
-    "softDeleteRetentionDays": {
-      "value": 90
-    },
-    "enablePurgeProtection": {
-      "value": true
-    },
-    "enableAdvancedAuditing": {
-      "value": true
-    },
-    "dataResidencyRegion": {
-      "value": "East US"
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environment": {
+            "value": "dev"
+        },
+        "location": {
+            "value": "eastus"
+        },
+        "baseName": {
+            "value": "bo-gpsc-reports"
+        },
+        "tenantId": {
+            "value": "cca76bf2-ad28-4adb-bbd0-deeb9dd15a80"
+        },
+        "skuName": {
+            "value": "standard"
+        },
+        "enableHsmProtection": {
+            "value": false
+        },
+        "enableRbacAuthorization": {
+            "value": true
+        },
+        "enabledForDeployment": {
+            "value": true
+        },
+        "enabledForTemplateDeployment": {
+            "value": true
+        },
+        "enabledForDiskEncryption": {
+            "value": false
+        },
+        "enableSoftDelete": {
+            "value": true
+        },
+        "softDeleteRetentionDays": {
+            "value": 7
+        },
+        "enablePurgeProtection": {
+            "value": false
+        },
+        "networkAclsDefaultAction": {
+            "value": "Deny"
+        },
+        "networkAclsBypass": {
+            "value": "None"
+        },
+        "allowedIpAddresses": {
+            "value": []
+        },
+        "enableDiagnostics": {
+            "value": true
+        },
+        "logAnalyticsRetentionDays": {
+            "value": 30
+        },
+        "diagnosticLogsRetentionDays": {
+            "value": 30
+        },
+        "logAnalyticsWorkspaceSku": {
+            "value": "PerGB2018"
+        },
+        "enableLogAnalyticsWorkspace": {
+            "value": true
+        },
+        "existingLogAnalyticsWorkspaceName": {
+            "value": ""
+        },
+        "timestamp": {
+            "value": "[utcNow()]"
+        },
+        "customTags": {
+            "value": {
+                "Purpose": "Development",
+                "CostCenter": "",
+                "AutoShutdown": "true",
+                "SecurityLevel": "High",
+                "DataClassification": "Internal"
+            }
+        }
     }
-  }
 }
