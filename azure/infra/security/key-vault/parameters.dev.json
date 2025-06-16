@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "East US"
+    },
+    "baseName": {
+      "value": "bo-gpsc-reports"
+    },
+    "tenantId": {
+      "value": "[subscription().tenantId]"
+    },
+    "enableHsmProtection": {
+      "value": false
+    },
+    "softDeleteRetentionDays": {
+      "value": 90
+    },
+    "enablePurgeProtection": {
+      "value": true
+    },
+    "enableAdvancedAuditing": {
+      "value": true
+    },
+    "dataResidencyRegion": {
+      "value": "East US"
+    }
+  }
+}
