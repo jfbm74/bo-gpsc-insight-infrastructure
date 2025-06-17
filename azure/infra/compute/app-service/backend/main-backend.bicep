@@ -22,12 +22,12 @@ param baseName string = 'bo-gpsc-reports'
 param timestamp string = utcNow()
 
 @description('App Service Plan SKU')
-@allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1V2', 'P2V2', 'P3V2'])
-param appServiceSkuName string = 'B1'
+@allowed(['B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1V2', 'P1V3','P2V2', 'P3V2'])
+param appServiceSkuName string = 'P1V3'
 
 @description('App Service Plan SKU tier')
-@allowed(['Basic', 'Standard', 'Premium', 'PremiumV2'])
-param appServiceSkuTier string = 'Basic'
+@allowed(['Basic', 'Standard', 'Premium', 'PremiumV2', 'PremiumV3'])
+param appServiceSkuTier string = 'PremiumV3'
 
 @description('VNet Name for integration (must exist)')
 param vnetName string = ''

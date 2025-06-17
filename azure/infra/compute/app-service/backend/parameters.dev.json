@@ -12,10 +12,10 @@
       "value": "bo-gpsc-reports"
     },
     "appServiceSkuName": {
-      "value": "B1"
+      "value": "P1v3"
     },
     "appServiceSkuTier": {
-      "value": "Basic"
+      "value": "PremiumV3"
     },
     "vnetName": {
       "value": ""
