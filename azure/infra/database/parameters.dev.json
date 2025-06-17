@@ -11,9 +11,16 @@
     "baseName": {
       "value": "bo-gpsc-reports"
     },
+    
     "sqlAdminLogin": {
-      "value": "sqladmin"
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/086b4500-6281-444b-8430-40696735e453/resourceGroups/bo-gpsc-reports-dev/providers/Microsoft.KeyVault/vaults/bo-gpsc-reports-dev-kv"
+        },
+        "secretName": "sql-admin-username"
+      }
     },
+    
     "sqlAdminPassword": {
       "reference": {
         "keyVault": {
@@ -22,6 +29,7 @@
         "secretName": "sql-admin-password"
       }
     },
+    
     "databaseEdition": {
       "value": "Standard"
     },

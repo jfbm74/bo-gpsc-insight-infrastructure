@@ -20,11 +20,11 @@ param baseName string = 'bo-gpsc-reports'
 @description('Current timestamp for unique naming')
 param timestamp string = utcNow()
 
-@description('SQL Server administrator login')
+@description('SQL Server administrator login (from Key Vault)')
 @secure()
-param sqlAdminLogin string = 'sqladmin'
+param sqlAdminLogin string
 
-@description('SQL Server administrator password')
+@description('SQL Server administrator password (from Key Vault)')
 @secure()
 param sqlAdminPassword string
 
@@ -87,6 +87,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   location: location
   tags: commonTags
   properties: {
+    // ✅ Both credentials come from Key Vault
     administratorLogin: sqlAdminLogin
     administratorLoginPassword: sqlAdminPassword
     version: '12.0'
