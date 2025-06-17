@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "East US"
+    },
+    "baseName": {
+      "value": "bo-gpsc-reports"
+    },
+    "sqlAdminLogin": {
+      "value": "sqladmin"
+    },
+    "sqlAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/086b4500-6281-444b-8430-40696735e453/resourceGroups/bo-gpsc-reports-dev/providers/Microsoft.KeyVault/vaults/bo-gpsc-reports-dev-kv"
+        },
+        "secretName": "sql-admin-password"
+      }
+    },
+    "databaseEdition": {
+      "value": "Standard"
+    },
+    "databaseServiceObjective": {
+      "value": "S1"
+    },
+    "databaseMaxSizeGB": {
+      "value": 10
+    },
+    "enableAzureADOnlyAuth": {
+      "value": false
+    },
+    "azureADAdminObjectId": {
+      "value": ""
+    },
+    "azureADAdminName": {
+      "value": ""
+    },
+    "enableAdvancedDataSecurity": {
+      "value": true
+    },
+    "backupRetentionDays": {
+      "value": 7
+    },
+    "enableZoneRedundancy": {
+      "value": false
+    }
+  }
+}
