@@ -219,11 +219,11 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         // Python/FastAPI specific settings
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
+          value: 'false'
         }
         {
           name: 'ENABLE_ORYX_BUILD'
-          value: 'true'
+          value: 'false'
         }
         {
           name: 'PYTHON_VERSION'
@@ -231,7 +231,7 @@ resource backendApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
-          value: 'false'
+          value: 'true'
         }
         // FastAPI specific environment variables
         {

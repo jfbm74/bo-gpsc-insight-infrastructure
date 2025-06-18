@@ -1,0 +1,94 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environment": {
+            "value": "dev"
+        },
+        "location": {
+            "value": "eastus"
+        },
+        "baseName": {
+            "value": "bo-gpsc-reports"
+        },
+        "tenantId": {
+            "value": "cca76bf2-ad28-4adb-bbd0-deeb9dd15a80"
+        },
+        "skuName": {
+            "value": "standard"
+        },
+        "enableHsmProtection": {
+            "value": false
+        },
+        "enableRbacAuthorization": {
+            "value": false
+        },
+        "userObjectId": {
+            "value": "YOUR_USER_OBJECT_ID_HERE"
+        },
+        "additionalUserObjectIds": {
+            "value": []
+        },
+        "servicePrincipalObjectIds": {
+            "value": []
+        },
+        "enabledForDeployment": {
+            "value": false
+        },
+        "enabledForTemplateDeployment": {
+            "value": true
+        },
+        "enabledForDiskEncryption": {
+            "value": false
+        },
+        "enableSoftDelete": {
+            "value": true
+        },
+        "softDeleteRetentionDays": {
+            "value": 7
+        },
+        "enablePurgeProtection": {
+            "value": true
+        },
+        "networkAclsDefaultAction": {
+            "value": "Deny"
+        },
+        "networkAclsBypass": {
+            "value": "AzureServices"
+        },
+        "allowedIpAddresses": {
+            "value": []
+        },
+        "enableDiagnostics": {
+            "value": true
+        },
+        "logAnalyticsRetentionDays": {
+            "value": 30
+        },
+        "diagnosticLogsRetentionDays": {
+            "value": 30
+        },
+        "logAnalyticsWorkspaceSku": {
+            "value": "PerGB2018"
+        },
+        "enableLogAnalyticsWorkspace": {
+            "value": true
+        },
+        "existingLogAnalyticsWorkspaceName": {
+            "value": ""
+        },
+        "timestamp": {
+            "value": "[utcNow()]"
+        },
+        "customTags": {
+            "value": {
+                "Purpose": "Development",
+                "CostCenter": "",
+                "AutoShutdown": "true",
+                "SecurityLevel": "High",
+                "DataClassification": "Internal",
+                "AccessMethod": "AccessPolicies"
+            }
+        }
+    }
+}
